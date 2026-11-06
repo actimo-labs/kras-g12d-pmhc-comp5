@@ -790,3 +790,80 @@ That distinction is worth keeping precise rather than declaring Gate 1 retroacti
 900 backbones × 4 sequences × 2 pools, ~80% composition pass, 1 per backbone per pool
 → ~1,800 candidates → at the pilot's 31% two-gate rate, **~550 survivors** for a 20-design
 submission. Ample margin, and the constraint shifts from yield to diversity.
+
+---
+
+## Stage 11 — formal calibration (CORRECTS Stage 09 and Stage 10)
+
+| field | value |
+|---|---|
+| end | 2026-11-07 07:15 | GPU-h | ~1.8 total for the overnight block |
+| outputs | `configs/thresholds_calibrated.yaml`, `results/processed/calibration_report.json`, `logs/calibration.log` |
+| inputs | 32 real · 64 sequence controls · 21 framework decoys · 32-design seed replicate |
+
+### Correction: Stages 09–10 calibrated on the weaker control family
+
+Stage 09 reported "+0.260 separation, the absolute ipTM is sequence-specific" and Stage 10
+reported "0/32 scrambles survive, 10/32 real pass". **Both used shuffled controls only.**
+With the reversed family included:
+
+| family | n | median | p95 | max |
+|---|---|---|---|---|
+| real designs | 32 | 0.462 | 0.894 | 0.962 |
+| shuffled | 32 | 0.221 | 0.499 | 0.598 |
+| **reversed** | 32 | **0.379** | **0.777** | **0.849** |
+| β2m decoys | 21 | 0.234 | 0.565 | 0.570 |
+
+**Reversal is a much stronger negative than shuffling.** It preserves composition *and* local
+run-length and hydrophobic patterning, and Boltz rewards that structure: reversed controls
+reach ipTM 0.849. Median separation from real designs is **+0.083**, not the +0.260 claimed
+against shuffled alone. Including it was the right call — a control family that is too easy
+flatters the metric and would have set the threshold far too low.
+
+Revised two-gate performance at the calibrated cuts (ipTM > 0.7746, `bsa_peptide` > 97.2 Å²):
+
+| set | pass both |
+|---|---|
+| real designs | **5/32 (16%)** |
+| shuffled | 0/32 |
+| reversed | **2/32** |
+| β2m framework decoys | 0/21 |
+
+So **2 of 64 sequence controls survive — a 3% false-positive rate, not 0%** — and real yield
+is 16%, not 31%. The filter still works, and still eliminates every framework decoy, but it is
+weaker than Stage 10 claimed.
+
+Real designs do separate in the **upper tail**, which is where selection happens: real p95
+0.894 vs reversed p95 0.777. Selecting the top of the distribution remains meaningful.
+
+### Calibrated cuts and yields
+
+| metric | cut | source | real designs passing |
+|---|---|---|---|
+| `bsa_peptide` | 97.2 Å² | decoy p95 | 14/32 |
+| `n_peptide_contacts` | 4 | decoy p95 | 12/32 |
+| `iptm_binder_peptide_g12d` | 0.7746 | control p95 | 8/32 |
+| `iptm_g12d` | 0.7009 | control p95 | 8/32 |
+| `peptide_contact_fraction_area` | 0.1751 | decoy p95 | 5/32 |
+| `iptm_margin_empty` | 0.3352 | control p95 | 4/32 |
+| **`iptm_margin_wt`** | **0.4041** | **seed-noise p95** | **0/32** |
+
+`iptm_margin_wt` is now dead by construction: the calibrator detected that the sequence-control
+p95 (0.399) sat *below* the seed-replicate noise p95 (0.404), raised the cut to the noise
+floor as designed, and **no real design clears it**. That is the correct outcome — a threshold
+beneath its own noise floor would have been measuring the RNG.
+
+Note also `peptide_contact_fraction_area` calibrates to 0.1751, against the original
+provisional 0.25 that sat above the physical ceiling. 5/32 pass. The provisional value was not
+merely wrong, it was unreachable.
+
+### Gate 1 re-run: still FAIL
+
+Criterion 3 fails as written, unchanged and uncalibratable — the g12d-minus-empty ipTM spread
+does not separate peptide-targeted from framework designs. Criterion 2 now passes in substance
+(5/32 clear the calibrated contact gate; 14/32 clear `bsa_peptide`).
+
+### Revised Stage 2 projection
+
+~1,800 candidates × 16% two-gate survival ≈ **290 survivors** for a 20-design submission
+(was ~550 on the over-optimistic rate). Still ample; diversity remains the binding constraint.

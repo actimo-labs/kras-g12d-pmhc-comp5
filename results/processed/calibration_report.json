@@ -1,0 +1,209 @@
+{
+  "percentile": 95.0,
+  "families": {
+    "sequence_controls": {
+      "iptm_g12d": {
+        "n": 64,
+        "median": 0.271,
+        "mean": 0.3173,
+        "sd": 0.184,
+        "p50": 0.2776,
+        "p90": 0.6081,
+        "p95": 0.7009,
+        "max": 0.7967
+      },
+      "iptm_binder_peptide_g12d": {
+        "n": 64,
+        "median": 0.2976,
+        "mean": 0.3447,
+        "sd": 0.2003,
+        "p50": 0.3106,
+        "p90": 0.6444,
+        "p95": 0.7746,
+        "max": 0.849
+      },
+      "iptm_margin_wt": {
+        "n": 64,
+        "median": -0.0564,
+        "mean": -0.0112,
+        "sd": 0.1895,
+        "p50": -0.0551,
+        "p90": 0.263,
+        "p95": 0.3988,
+        "max": 0.4968
+      },
+      "iptm_margin_empty": {
+        "n": 64,
+        "median": -0.2942,
+        "mean": -0.2006,
+        "sd": 0.276,
+        "p50": -0.2574,
+        "p90": 0.2063,
+        "p95": 0.3352,
+        "max": 0.5081
+      }
+    },
+    "framework_decoys": {
+      "peptide_contact_fraction_area": {
+        "n": 21,
+        "median": 0.0,
+        "mean": 0.0283,
+        "sd": 0.0603,
+        "p50": 0.0,
+        "p90": 0.1074,
+        "p95": 0.1751,
+        "max": 0.206
+      },
+      "bsa_peptide": {
+        "n": 21,
+        "median": 0.0,
+        "mean": 17.3857,
+        "sd": 37.8206,
+        "p50": 0.0,
+        "p90": 69.6,
+        "p95": 97.2,
+        "max": 138.1
+      },
+      "n_peptide_contacts": {
+        "n": 21,
+        "median": 0.0,
+        "mean": 0.8095,
+        "sd": 1.6795,
+        "p50": 0.0,
+        "p90": 4.0,
+        "p95": 4.0,
+        "max": 6.0
+      }
+    }
+  },
+  "seed_replicate_noise": {
+    "iptm_margin_wt_peptide": {
+      "n": 32,
+      "median": 0.0972,
+      "mean": 0.1358,
+      "sd": 0.1322,
+      "p50": 0.1047,
+      "p90": 0.3421,
+      "p95": 0.4041,
+      "max": 0.4841
+    },
+    "iptm_margin_empty": {
+      "n": 32,
+      "median": 0.1057,
+      "mean": 0.1362,
+      "sd": 0.1206,
+      "p50": 0.108,
+      "p90": 0.2483,
+      "p95": 0.2566,
+      "max": 0.5337
+    },
+    "g12d_iptm_binder_peptide": {
+      "n": 32,
+      "median": 0.0844,
+      "mean": 0.1156,
+      "sd": 0.0937,
+      "p50": 0.0858,
+      "p90": 0.2349,
+      "p95": 0.2438,
+      "max": 0.4168
+    }
+  },
+  "real_designs": {
+    "peptide_contact_fraction_area": {
+      "n": 32,
+      "median": 0.0951,
+      "mean": 0.0898,
+      "sd": 0.0784,
+      "p50": 0.1008,
+      "p90": 0.1862,
+      "p95": 0.2079,
+      "max": 0.2468
+    },
+    "bsa_peptide": {
+      "n": 32,
+      "median": 68.35,
+      "mean": 84.0938,
+      "sd": 76.5584,
+      "p50": 71.2,
+      "p90": 200.7,
+      "p95": 204.0,
+      "max": 215.2
+    },
+    "n_peptide_contacts": {
+      "n": 32,
+      "median": 4.0,
+      "mean": 3.0625,
+      "sd": 2.6802,
+      "p50": 4.0,
+      "p90": 6.0,
+      "p95": 7.0,
+      "max": 8.0
+    },
+    "iptm_margin_wt": {
+      "n": 32,
+      "median": 0.0276,
+      "mean": -0.011,
+      "sd": 0.1572,
+      "p50": 0.0321,
+      "p90": 0.1852,
+      "p95": 0.2333,
+      "max": 0.2684
+    },
+    "iptm_margin_empty": {
+      "n": 32,
+      "median": 0.0152,
+      "mean": -0.0521,
+      "sd": 0.3224,
+      "p50": 0.0159,
+      "p90": 0.357,
+      "p95": 0.4861,
+      "max": 0.5755
+    }
+  },
+  "calibrated": {
+    "iptm_g12d": 0.7009,
+    "iptm_binder_peptide_g12d": 0.7746,
+    "iptm_margin_wt": 0.4041,
+    "iptm_margin_empty": 0.3352,
+    "peptide_contact_fraction_area": 0.1751,
+    "bsa_peptide": 97.2,
+    "n_peptide_contacts": 4.0
+  },
+  "yield": {
+    "bsa_peptide": {
+      "cut": 97.2,
+      "pass": 14,
+      "of": 32
+    },
+    "iptm_binder_peptide_g12d": {
+      "cut": 0.7746,
+      "pass": 8,
+      "of": 32
+    },
+    "iptm_g12d": {
+      "cut": 0.7009,
+      "pass": 8,
+      "of": 32
+    },
+    "iptm_margin_empty": {
+      "cut": 0.3352,
+      "pass": 4,
+      "of": 32
+    },
+    "iptm_margin_wt": {
+      "cut": 0.4041,
+      "pass": 0,
+      "of": 32
+    },
+    "n_peptide_contacts": {
+      "cut": 4.0,
+      "pass": 12,
+      "of": 32
+    },
+    "peptide_contact_fraction_area": {
+      "cut": 0.1751,
+      "pass": 5,
+      "of": 32
+    }
+  }
+}
