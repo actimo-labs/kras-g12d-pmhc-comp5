@@ -486,3 +486,89 @@ Fixes applied:
 
 Both were found by reading the code while generation ran, not by a test. Neither would have
 raised an error — they would have produced a plausible-looking manifest.
+
+---
+
+## Stage 06 — three-state Boltz-2 and GATE 1
+
+| field | value |
+|---|---|
+| start | 2026-11-07 02:33 | | end | 2026-11-07 03:12 |
+| GPU-h | **0.58** (1587 s main + 508 s decoy) |
+| inputs | 32 peptide-targeted + 8 β2m framework decoys |
+| outputs | `pilot/boltz/{main,decoy}_three_state.csv`, `results/processed/manifest*.csv/.parquet` |
+| status | **complete — 120/120 predictions, all `ok`** |
+
+Measured **16.5 s/prediction** (main, 96 predictions), 21.2 s (decoy, 24 — model load
+amortises over fewer). Earlier in-run estimates of 49 s were wrong: Boltz writes outputs in
+a batch at the end, so counting files mid-run badly understates throughput.
+
+### GATE 1 VERDICT — 2 PASS, 2 FAIL
+
+| criterion | result |
+|---|---|
+| 1. runs end to end, no manual intervention | **PASS** (after the `set -e` fix) |
+| 2. some designs reach `peptide_contact_fraction` ≥ 0.25 | **FAIL** — 0/32 |
+| 3. three-state differential discriminates at all | **FAIL** — see below |
+| 4. throughput fits the Stage 3 matrix | **PASS** |
+
+### Criterion 2 — the gate is above its own ceiling
+
+| | median | range |
+|---|---|---|
+| `bsa_total_target` | 849.2 Å² | 245.3–1554.6 |
+| `bsa_peptide` | 68.3 Å² | 0.0–215.2 |
+| `peptide_contact_fraction_area` | 0.095 | 0.000–**0.247** |
+
+Max is 0.247 against a 0.25 gate. This is not a design failure — it is the threshold being
+set above what the target physically allows (239.4 Å² of peptide; ceiling 0.199 at the
+Baker-reference 1200 Å² interface). **The threshold must be recalibrated from negatives.**
+
+Median total interface of 849 Å² is healthy and in the expected minibinder range.
+**11 of 32 designs have zero peptide burial** after folding — i.e. a third of backbones that
+looked docked drifted off the peptide once a sequence was threaded and the complex refolded.
+That gap between backbone geometry and folded pose is itself a useful filter.
+
+### Criterion 3 — ipTM cannot grade peptide dependency, but geometry can
+
+**The two pair scores are not independent.** binder↔peptide vs binder↔mhc ipTM correlate at
+**r = 0.9956**, constant ratio ≈ 0.92. `pair_chains_iptm` reports one docking-confidence
+number spread across pairs; it does **not** resolve which part of the target is engaged. Any
+plan to use the pep/mhc ratio as a peptide-focus metric is invalid.
+
+Clean comparison, controlling for decoys that drifted onto the peptide:
+
+| group | n | `iptm_margin_empty` median |
+|---|---|---|
+| main, touching peptide | 22 | +0.032 |
+| main, **zero** peptide burial | 10 | −0.219 |
+| decoy, **true framework** (0 peptide burial) | 5 | **−0.002** |
+| decoy, drifted onto peptide | 3 | +0.033 |
+
+Separation between real peptide-binders and true framework decoys: **+0.034 — nothing.**
+By `bsa_peptide` quartile the relationship is **non-monotonic** (−0.223, +0.056, −0.091,
++0.125), so it is not a dose–response.
+
+Read correctly: the decoys sit at −0.002, which is *exactly* the ≈0 a framework binder should
+give — the control behaves as designed. The failure is that peptide-engaging designs also sit
+near 0, so `iptm_margin_empty` only flags "ignores the peptide region entirely" and cannot
+grade dependency.
+
+**What does work:** geometry. `bsa_peptide` median 68.3 Å² (peptide-targeted) vs 0.0 Å²
+(decoys); 21/32 vs 3/8 contact the peptide at all; 9/32 vs 1/8 hit all four hotspots.
+
+### Criterion 4 — fits, for ONE model
+
+- Stage 3 Boltz leg, 600 designs × 3 states = 1,800 predictions ≈ **8.3 GPU-h**
+- Triage pass (~1,500, g12d only) ≈ **6.9 GPU-h**
+- **≈15.3 GPU-h** against a ~20 GPU-h block → fits, ~4.7 GPU-h spare.
+
+That spare will not cover the Chai-1 leg (≈8 GPU-h), which the ranking's "differentials
+across ≥2 models" requirement depends on — and Chai-1 is not installed.
+
+### Not yet interpretable
+
+Margins sit near zero (`margin_wt` median +0.028, sd 0.157; `margin_empty` median +0.015,
+sd 0.322) and **there is no run-to-run variance estimate**, so none of that spread can be
+called signal. The seed replicate is the first thing the overnight run measures. Until it
+lands, no design should be called a hit and no margin threshold should be set.
