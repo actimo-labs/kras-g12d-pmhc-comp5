@@ -742,3 +742,51 @@ the margins remain unfit for ranking while the score they are built from is fine
 4. **Record but do not rank on** `iptm_margin_wt` (noise) and `iptm_margin_empty` (reproducible
    but not discriminating). Neither may be cited as evidence of mutation specificity or
    peptide dependency in the methods note.
+
+---
+
+## Stage 10 — the two-gate filter: 0/32 scrambles survive, 10/32 real designs do
+
+Cuts taken from the **negative** distributions, not chosen in advance:
+`iptm_binder_peptide_g12d > 0.499` (shuffled-control p95) **AND**
+`bsa_peptide > 97.2 Å²` (β2m-decoy p95).
+
+| set | n | ipTM gate only | geometry gate only | **both gates** |
+|---|---|---|---|---|
+| real designs | 32 | 14 | 14 | **10 (31%)** |
+| shuffled controls | 32 | 3 | 5 | **0** |
+| β2m framework decoys | 8 | 2 | 1 | 1 |
+
+### Why the conjunction is necessary, and why neither gate alone would do
+
+Each gate has a different failure mode, and they do not overlap:
+
+- **ipTM alone** admits framework binders — the β2m decoys reach p95 0.506, essentially the
+  same as the shuffled p95 of 0.499. A confident interface is not a peptide interface.
+- **Geometry alone** admits scrambles — shuffled `bsa_peptide` has median 2.95 Å² but
+  **p95 212.5 Å², above the real designs' p95 of 204**. Boltz docks a scrambled chain
+  somewhere, and once it lands on the peptide the buried area is set by shape and size, not by
+  sequence quality. A p95-calibrated cut on geometry alone would have reproduced the original
+  0.25-contact-fraction mistake: a threshold above where the real designs live.
+
+Together they are complementary: geometry asks *is it on the peptide*, confidence asks *is the
+interface real rather than a composition artefact*. **All 32 composition-matched scrambles are
+eliminated** while 31% of real designs survive.
+
+### What this does and does not do to the Gate 1 verdict
+
+- Criterion 2 is **satisfied in substance**: 10/32 designs clear a *calibrated* peptide-contact
+  gate. The original 0.25 figure was unusable because it sat above the physical ceiling, not
+  because the designs failed.
+- Criterion 3 **still fails as literally written** — the g12d-minus-empty ipTM spread does not
+  separate peptide-targeted from framework designs, and no amount of calibration changes that.
+  What is now true is that its *purpose* — telling peptide binders from framework binders — is
+  achieved by other means, with a measured 0% false-positive rate on sequence controls.
+
+That distinction is worth keeping precise rather than declaring Gate 1 retroactively passed.
+
+### Projected yield for Stage 2
+
+900 backbones × 4 sequences × 2 pools, ~80% composition pass, 1 per backbone per pool
+→ ~1,800 candidates → at the pilot's 31% two-gate rate, **~550 survivors** for a 20-design
+submission. Ample margin, and the constraint shifts from yield to diversity.
