@@ -641,3 +641,53 @@ has no model-based proxy and the honest options are to rank on objective 2 (pept
 dependency, where geometry does discriminate: 68.3 vs 0.0 Å² buried) and declare objective 1
 unpredicted — which is defensible, since `docs/PIPELINE.md §3` already says "no method
 reliably predicts the WT-vs-G12D window for a de novo binder".
+
+---
+
+## Stage 08 — definitive noise floor, n=32 (REVISES Stage 07)
+
+| field | value |
+|---|---|
+| start | 2026-11-07 05:27 | | end | 2026-11-07 05:54 |
+| GPU-h | 0.44 (32 designs × 3 states, seed 1234) |
+| outputs | `pilot/boltz_rep/rep32_three_state.csv` |
+| status | complete |
+
+The n=8 estimate in Stage 07 **over-stated the noise for `iptm_margin_wt`**. Corrected figures:
+
+| metric | noise mean \|Δ\| | between-design sd | **S/N** | **Spearman ρ between seeds** |
+|---|---|---|---|---|
+| `iptm_margin_wt` | 0.136 (was 0.186) | 0.157 | **1.16×** | **+0.239** |
+| `iptm_margin_empty` | 0.136 (was 0.173) | 0.322 | **2.37×** | **+0.853** |
+| `g12d_iptm_binder_peptide` | 0.116 | 0.251 | 2.17× | +0.703 |
+
+### The rank correlation is the number that matters, not S/N
+
+We rank designs; we do not use the absolute values. So the question is whether the *ordering*
+survives a seed change.
+
+- **`iptm_margin_wt`: ρ = +0.239.** Rank the 32 designs by it under one seed and re-rank under
+  another and you get a nearly unrelated ordering. **Confirmed unusable for ranking**, even
+  though S/N rose to 1.16×. The Stage 07 conclusion stands; only the magnitude changes.
+- **`iptm_margin_empty`: ρ = +0.853.** Strong rank agreement. This is **more usable than
+  Stage 07 claimed** and it clears the S/N > 2 bar. Demoting it to "weak tiebreak" was too
+  harsh.
+
+### Reproducible is not the same as informative — the distinction that matters here
+
+`iptm_margin_empty` is now shown to be **reproducible** (ρ 0.85). It was separately shown in
+Stage 06 **not to discriminate** framework binders from peptide binders (main-touching-peptide
++0.032 vs true-framework decoys −0.002, separation +0.034).
+
+Both are true. It reliably measures *something* about a design; that something is not peptide
+dependency. A reproducible metric that does not track the property you care about is a
+precise instrument pointed in the wrong direction, and it is more dangerous than a noisy one
+because the stability invites trust.
+
+**Consequence for ranking:** the geometry-first order stays. `iptm_margin_empty` is promoted
+from "tiebreak" to a legitimate ranking input **for interface confidence**, but it must not be
+presented as evidence of peptide dependency — `bsa_peptide` and hotspot coverage are the only
+measured discriminators of that (68.3 vs 0.0 Å²).
+
+`iptm_margin_wt` remains recorded, not ranked on. `scripts/21_sampletest.sh` will show whether
+diffusion-sample averaging lifts its ρ; S/N alone is not the test — **ρ > 0.7 is.**
