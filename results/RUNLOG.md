@@ -867,3 +867,34 @@ does not separate peptide-targeted from framework designs. Criterion 2 now passe
 
 ~1,800 candidates × 16% two-gate survival ≈ **290 survivors** for a 20-design submission
 (was ~550 on the over-optimistic rate). Still ample; diversity remains the binding constraint.
+
+---
+
+## Stage 11b — operational failure: self-match deadlock in the chained waiters
+
+**~30 minutes of idle GPU**, 17:15–17:45, between the overnight block finishing and the sample
+test being restarted by hand.
+
+The chain scripts gated on:
+
+```bash
+while pgrep -f "20_overnight.sh" >/dev/null 2>&1; do sleep 60; done
+```
+
+`pgrep -f` matches **full command lines**. The harness shell wrappers that created those
+scripts carry the heredoc body — including the literal string `20_overnight.sh` — in their own
+command lines, and they outlive the command. So each waiter was blocked on a process whose
+command line contained the name of the thing it was waiting for, and would have waited
+indefinitely. `chain_stage2` was additionally gated on `chain_sampletest`, so the whole
+remaining queue was stuck behind it.
+
+The same trap bit the cleanup: `pkill -f "chain_sampletest|chain_stage2"` matched the shell
+executing it and killed itself (exit 144).
+
+**Rule going forward:** do not gate background work on a `pgrep -f` pattern that can appear in
+the command line of the process doing the matching. Long jobs are launched directly through
+the harness background runner, which tracks them and notifies on exit — the 32-backbone
+generation and all Boltz stages ran that way without trouble. The `nohup` + `pgrep` wrapper
+pattern bought nothing and cost half an hour.
+
+No data was lost; the overnight block had already completed and committed before the stall.
