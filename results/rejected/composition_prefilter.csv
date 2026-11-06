@@ -1,0 +1,2 @@
+candidate_id,stage,reject_reason
+smoke_0_s1,05_boltz3_composition_prefilter,hydrophobic_run>=5

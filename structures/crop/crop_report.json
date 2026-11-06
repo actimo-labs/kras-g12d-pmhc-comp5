@@ -1,0 +1,45 @@
+{
+  "source": "structures/g12d.pdb",
+  "crop_method": "domain (alpha1/alpha2 platform) not distance shell -- see docstring",
+  "platform_range": [
+    1,
+    180
+  ],
+  "chains_kept": [
+    "A",
+    "C"
+  ],
+  "chains_dropped": [
+    "B"
+  ],
+  "residues_kept": {
+    "A": 180,
+    "C": 10
+  },
+  "verify_shell_angstrom": 15.0,
+  "shell_heavy_span": [
+    3,
+    179
+  ],
+  "shell_fits_inside_platform": true,
+  "b2m_shell_residues_dropped": [
+    31,
+    53,
+    54,
+    55,
+    56,
+    58,
+    60,
+    62
+  ],
+  "peptide_numbering_preserved": true,
+  "hotspot_res": [
+    "C4",
+    "C5",
+    "C7",
+    "C8"
+  ],
+  "contigs": "A1-180/0 C1-10",
+  "generation_only": true,
+  "validation_target": "structures/{g12d,wt,empty}.pdb (full A+B+C, uncropped)"
+}

@@ -1,0 +1,3 @@
+binder_chain,binder_length,bsa_binder,bsa_peptide,bsa_total_target,contact_cutoff_angstrom,design,hotspots_contacted,n_hotspots_contacted,n_peptide_contacts,n_target_contact_res,peptide_atom_contacts,peptide_contact_fraction_area,peptide_contact_fraction_count,peptide_contacts_backbone,peptide_contacts_sidechain,peptide_positions_contacted,qc_status,reject_reason,sidechains_present
+A,78,not_run,not_run,not_run,8.0,smoke_0,"[4, 5, 7, 8]",4,5,22,18,not_run,0.2273,18,0,"[4, 5, 6, 7, 8]",scored_backbone_only,,False
+A,70,not_run,not_run,not_run,8.0,smoke_1,"[4, 5, 7, 8]",4,6,20,18,not_run,0.3,18,0,"[4, 5, 6, 7, 8, 9]",scored_backbone_only,,False
