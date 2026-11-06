@@ -132,7 +132,14 @@ cofolding:
   triage:
     model: boltz2
     states: [g12d]
-    keep_top_n: 600
+    diffusion_samples: 1    # 1 sample is adequate for a COARSE cut: the
+                            # absolute iptm_binder_peptide has rho +0.703 even
+                            # unaveraged. Margins are not used at this stage.
+    keep_top_n: 450         # was 600. Measured 5-sample cost is 39.7 s/pred
+                            # (2.41x single, not 5x -- the trunk is shared).
+                            # 600x3 at 5 samples = 19.9 GPU-h, plus 8.3 for
+                            # triage = 28 GPU-h against a ~20 h block. 450
+                            # brings the full matrix to 14.9 GPU-h, ~23 total.
   full_matrix:
     # Chai-1 dropped 2026-11-07, approved by Harjas ("okay if boltz2 does the
     # job"). It is not installed, and the two-model consensus it was meant to
@@ -142,6 +149,9 @@ cofolding:
     # rests on folded-complex geometry, which is single-model by nature.
     models: [boltz2]
     states: [g12d, wt, empty]
+    diffusion_samples: 5    # REQUIRED. The margins are only usable averaged;
+                            # see ranking.objective_1_status.
+    average_samples: true
   antibody_track_extra:
     model: opendde
     checkpoint: opendde_abag.pt
@@ -187,6 +197,16 @@ ranking:
   # Geometry, by contrast, separates cleanly: bsa_peptide median 68.3 A^2 for
   # peptide-targeted designs vs 0.0 A^2 for beta2m framework decoys.
   # See results/RUNLOG.md Stage 07.
+  # RE-REVISED 2026-11-07 after scripts/21_sampletest.sh. Averaging 5 diffusion
+  # samples cut margin_wt noise 0.136 -> 0.053 and lifted its between-seed
+  # Spearman rho from +0.239 to +0.846, clearing the rho > 0.70 bar. Objective 1
+  # therefore REGAINS a proxy and is no longer UNPREDICTED -- but only when
+  # scored with >=5 averaged samples. At one sample it remains noise.
+  order_5sample:
+    - iptm_margin_wt         # objective 1, restored. VALID ONLY at >=5 samples.
+    - peptide_geometry       # objective 2: bsa_peptide + contacts + hotspots
+    - iptm_margin_empty      # objective 2 confirm (rho +0.881 at 5 samples)
+    - affinity_proxy         # objective 3. NEVER reported as a K_D.
   order:
     - peptide_geometry       # objective 2 proxy, PROMOTED: bsa_peptide +
                              # n_peptide_contacts + hotspot coverage, measured
@@ -196,14 +216,18 @@ ranking:
     - affinity_proxy         # objective 3: interface BSA + contact density.
                              # NEVER reported as a K_D.
   objective_1_status: |
-    UNPREDICTED. Mutation specificity ranks first officially, but no metric
-    available to us resolves it: iptm_margin_wt is at the noise floor, and
-    PyRosetta/PRODIGY are not installed. docs/PIPELINE.md section 3 already
-    concedes "no method reliably predicts the WT-vs-G12D window for a de novo
-    binder". iptm_margin_wt is still RECORDED for every design, but it is not
-    used to rank unless scripts/21_sampletest.sh shows that averaging over
-    diffusion samples lifts it above S/N 2. Do not claim mutation specificity
-    in the methods note on the strength of it.
+    RECOVERED at >=5 averaged diffusion samples, 2026-11-07.
+    scripts/21_sampletest.sh: margin_wt noise 0.136 -> 0.053, between-seed
+    Spearman rho +0.239 -> +0.846, S/N 1.15 -> 2.94. margin_empty likewise
+    improved to rho +0.881, S/N 4.40.
+    CONDITION: this holds ONLY for scores averaged over >=5 diffusion samples.
+    Any single-sample margin_wt in this repo is noise and must not be ranked on.
+    The manifest records n_samples_averaged per row; check it before using a
+    margin.
+    STILL TRUE: the calibrated cut in configs/thresholds_calibrated.yaml
+    (0.4041) was derived from SINGLE-sample noise and is far too strict for
+    5-sample scores. It must be recalibrated against 5-sample negative controls
+    before it gates anything.
   superseded_order:          # original, kept for audit only
     - iptm_margin_wt
     - iptm_margin_empty

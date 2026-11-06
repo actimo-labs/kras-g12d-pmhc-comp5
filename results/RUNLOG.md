@@ -898,3 +898,56 @@ generation and all Boltz stages ran that way without trouble. The `nohup` + `pgr
 pattern bought nothing and cost half an hour.
 
 No data was lost; the overnight block had already completed and committed before the stall.
+
+---
+
+## Stage 12 — diffusion-sample averaging RESCUES objective 1
+
+| field | value |
+|---|---|
+| start | 2026-11-07 07:45 | | end | 2026-11-07 08:32 |
+| GPU-h | 0.80 (12 designs × 3 states × 5 samples, run twice at different seeds) |
+| outputs | `pilot/boltz_samp/samp5{,b}_three_state.csv`, `logs/sampletest.log` |
+| status | **PASS — both margins now usable** |
+
+| metric | noise mean \|Δ\| | Spearman ρ | S/N |
+|---|---|---|---|
+| `margin_wt` 1 sample | 0.136 | +0.239 | 1.15× |
+| **`margin_wt` 5 samples** | **0.053** | **+0.846** | **2.94×** |
+| `margin_empty` 1 sample | 0.136 | +0.853 | 2.37× |
+| **`margin_empty` 5 samples** | **0.073** | **+0.881** | **4.40×** |
+
+Noise fell **2.57×** on 5 samples against √5 = 2.24 expected for independent draws — slightly
+better than independent, so the samples are not correlated in a way that defeats averaging.
+
+**Objective 1 is no longer unpredicted.** `iptm_margin_wt` is restored to the ranking, with a
+hard condition: **valid only at ≥5 averaged samples.** Any single-sample margin in this repo
+is noise. The manifest carries `n_samples_averaged` per row so this cannot be lost track of.
+
+### The cost works out because samples share the trunk
+
+Measured **39.7 s/prediction at 5 samples vs 16.5 s at 1 — a 2.41× cost for 5× the samples**,
+because Boltz recomputes only the diffusion module per sample while the trunk is shared. Naive
+5× costing would have made this look impossible.
+
+| stage | design × states | @1 sample | @5 samples |
+|---|---|---|---|
+| triage (g12d only) | 1500 × 1 | 6.9 GPU-h | 16.6 GPU-h |
+| full matrix | 600 × 3 | 8.2 GPU-h | 19.9 GPU-h |
+| **total** | | 15.1 | **36.4 GPU-h** |
+
+36.4 h does not fit the ~20 h block, so samples are spent only where they buy something:
+
+- **Triage at 1 sample.** It ranks on absolute `iptm_binder_peptide` (ρ +0.703 unaveraged) and
+  geometry; no margin is consulted, so averaging would buy nothing. → 8.3 GPU-h at ~1,800
+  candidates.
+- **Full matrix at 5 samples**, cut from 600 to **450** designs. → 14.9 GPU-h.
+- **Total ≈ 23 GPU-h**, against ~60 h remaining to the freeze with Stage 2 (16 h) also to run.
+
+### Outstanding, and it matters
+
+`configs/thresholds_calibrated.yaml` sets `iptm_margin_wt > 0.4041`, derived from
+**single-sample** noise. At 5 samples the noise floor is ~2.6× lower, so that cut is far too
+strict and currently passes 0/32 designs. **It must be recalibrated against 5-sample negative
+controls before it gates anything.** Scheduled with the Stage 3 triage, where 5-sample
+controls become available as a by-product.
