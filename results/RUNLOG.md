@@ -691,3 +691,54 @@ measured discriminators of that (68.3 vs 0.0 Å²).
 
 `iptm_margin_wt` remains recorded, not ranked on. `scripts/21_sampletest.sh` will show whether
 diffusion-sample averaging lifts its ρ; S/N alone is not the test — **ρ > 0.7 is.**
+
+---
+
+## Stage 09 — shuffled-sequence controls: the first clean positive
+
+| field | value |
+|---|---|
+| start | 2026-11-07 05:54 | | status | g12d complete; wt/empty in progress |
+
+32 real designs vs 32 **composition-matched** scrambles (every control has the exact same
+amino-acid content as its parent, asserted in `scripts/07_controls.py`), `g12d` state:
+
+| | n | median | range |
+|---|---|---|---|
+| real designs | 32 | **0.462** | 0.125–0.962 |
+| shuffled controls | 32 | **0.203** | 0.087–0.565 |
+
+Separation **+0.260**. Only **2 of 32** scrambles reach the real median.
+
+**The absolute binder↔peptide ipTM is sequence-specific.** It is not merely reporting "a
+75-residue chain of this composition fits in this groove" — if it were, composition-matched
+scrambles would score the same, and they do not. The ProteinMPNN sequences are contributing
+real signal, and `g12d_iptm_binder_peptide` now has a measured negative floor rather than a
+guessed one.
+
+### How this reconciles with the margin failures
+
+The three results are consistent once absolute scores and differences of scores are kept
+apart:
+
+| quantity | reproducible? | discriminates? | usable for ranking |
+|---|---|---|---|
+| `g12d_iptm_binder_peptide` (absolute) | ρ +0.703 | **yes**, +0.260 vs scrambles | **yes** |
+| `iptm_margin_empty` (difference) | ρ +0.853 | no, +0.034 vs framework decoys | confidence only |
+| `iptm_margin_wt` (difference) | ρ +0.239 | not measurable at this noise | **no** |
+| `bsa_peptide` (geometry) | deterministic | **yes**, 68.3 vs 0.0 Å² | **yes** |
+
+Differencing two ipTM values subtracts most of the signal and adds both their noises, which is
+why the absolute score survives and the margins do not. Nothing here contradicts Stage 08 —
+the margins remain unfit for ranking while the score they are built from is fine.
+
+### Resulting ranking scheme
+
+1. **Gate on geometry** — `bsa_peptide` / hotspot coverage: is the binder on the peptide at all?
+   (The only measured discriminator of peptide focus.)
+2. **Gate on calibrated absolute confidence** — `g12d_iptm_binder_peptide` above the shuffled-control
+   percentile: is the interface real rather than a composition artefact?
+3. **Rank within survivors** by interface size and contact density.
+4. **Record but do not rank on** `iptm_margin_wt` (noise) and `iptm_margin_empty` (reproducible
+   but not discriminating). Neither may be cited as evidence of mutation specificity or
+   peptide dependency in the methods note.
