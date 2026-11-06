@@ -1,0 +1,172 @@
+# comp5 — KRAS G12D pMHC. Single source of truth for target + thresholds.
+# Sequences verified against the live challenge page 2026-11-06.
+# Any value marked `provisional: true` MUST be replaced by a calibrated value
+# from the negative-control run before it is used for ranking.
+
+challenge:
+  id: comp5
+  name: "KRAS G12D pMHC"
+  url: "https://proteinbase.com/competitions/anthropic-adaptyv-2026/challenges/pmhc"
+  submit_url: "https://proteinbase.com/competitions/anthropic-adaptyv-2026/rounds/5/submit"
+  spec_verified: "2026-11-06"
+  deadline_aoe: "2026-11-08T23:59:00-12:00"
+  deadline_melbourne: "2026-11-09T22:59:00+11:00"
+  internal_freeze_melbourne: "2026-11-09T18:00:00+11:00"
+  track: UNCONFIRMED          # prior rounds were Track 3 -> cap 20. CONFIRM WITH HARJAS.
+  max_designs: 20             # 40 for Track 1, 20 for Tracks 2/3
+  length_min: 10
+  length_max: 250
+  allowed_formats: [single_chain_protein, nanobody, scFv, Fab]
+  minibinder_range: [40, 100] # the one published molecule category
+
+target:
+  allele: "HLA-A*11:01"
+  allele_4field: "A*11:01:01:01"
+  ipd_imgt: "HLA00043"
+  structure_pdb: "7OW6"
+  structure_chains: [A, B, C]
+  structure_note: "TCR removed. Only structure with a resolved peptide centre; 7OW4 central bulge is disordered."
+
+  heavy_chain:
+    uniprot: Q5S3G3
+    range: [25, 305]
+    length: 281
+    seq: "GSHSMRYFYTSVSRPGRGEPRFIAVGYVDDTQFVRFDSDAASQRMEPRAPWIEQEGPEYWDQETRNVKAQSQTDRVDLGTLRGYYNQSEDGSHTIQIMYGCDVGPDGRFLRGYRQDAYDGKDYIALNEDLRSWTAADMAAQITKRKWEAAHAAEQQRAYLEGRCVEWLRRYLENGKETLQRTDPPKTHMTHHPISDHEATLRCWALGFYPAEITLTWQRDGEDQTQDTELVETRPAGDGTFQKWAAVVVPSGEEQRYTCHVQHEGLPKPLTLRWELSSQPT"
+
+  b2m:
+    uniprot: P61769
+    range: [21, 119]
+    length: 99
+    seq: "IQRTPKIQVYSRHPAENGKSNFLNCYVSGFHPSDIEVDLLKNGERIEKVEHSDLSFSKDWSFYLLYYTEFTPTEKDEYACRVNHVTLSQPKIVKWDRDM"
+
+states:
+  g12d:
+    role: bind
+    peptide: "VVVGADGVGK"
+    peptide_uniprot: P01116
+    peptide_range: [7, 16]
+    mutation: "KRAS G12D at peptide position 6"
+  wt:
+    role: do_not_bind
+    peptide: "VVVGAGGVGK"
+    build: "in-silico D6->G on chain C of 7OW6, local relax only"
+  empty:
+    role: do_not_bind
+    peptide: null
+    build: "chain C deleted, light groove relax"
+
+conformational_states:
+  primary: bulge_down      # 7OW6, TCR-induced, Asp6 buried in F-pocket
+  secondary: bulge_up      # MODELLED HYPOTHESIS, not observed. Drop if prep exceeds 1h.
+  secondary_confidence: low
+
+hotspots:
+  chain: C
+  primary: [4, 5, 7, 8]    # exposed central bulge
+  tracked_not_targeted: [6] # mutant Asp - buried in bulge_down state
+  anchors_excluded: [1, 10] # p1 Val A-pocket, p10 Lys F-pocket
+  exclude_regions: ["chain A alpha1 helix", "chain A alpha2 helix", "chain B"]
+  note: "Hotspots reference the TARGET chain's renumbered residues AFTER cropping. Assert in code."
+  crop_shell_angstrom: 15
+
+generation:
+  track_a1:
+    model: rfdiffusion
+    source: "reuse tnf-a-comp2/rfdiffusion.sh"
+    n_backbones: 3500
+    enabled: true
+  track_a2:
+    model: freebindcraft
+    n_designs: 800
+    enabled: true
+  track_b:
+    model: rfantibody
+    format: nanobody
+    enabled: false          # gated: enable at H+14 only if GATE 2 passes
+    gate: "GATE 2 at H+14"
+  rfd4_proteina:
+    enabled: false          # see docs/PIPELINE.md section 0 - rejected for this run
+    reason: "<3 weeks old, unvalidated design quality, no pMHC track record, no debug budget at 71h"
+
+sequence_design:
+  models: [proteinmpnn, solublempnn]
+  pools:
+    neutral:
+      bias: null
+    basic_biased:
+      bias: "mild Arg/Lys enrichment at positions projecting over peptide p6"
+      status: HYPOTHESIS
+      rationale: "R50a/K70a electrostatic mechanism, Poole & Karuppiah 2022. Not a validated design rule."
+  prefilter:
+    name: mpnn_peptide_recovery
+    description: "thread VVVGADGVGK vs VVVGAGGVGK through designed interface; keep mutant-favouring"
+    run_before_cofolding: true
+
+cofolding:
+  triage:
+    model: boltz2
+    states: [g12d]
+    keep_top_n: 600
+  full_matrix:
+    models: [boltz2, chai1]
+    states: [g12d, wt, empty]
+  antibody_track_extra:
+    model: opendde
+    checkpoint: opendde_abag.pt
+  boltz2_msa_server: "10.148.0.19:8080"
+  cache_mhc_msa: true
+  checkpoint_every_batch: true
+
+thresholds:
+  # ALL provisional. Calibrate from negative controls (comp2 04b/04c pattern) before ranking.
+  peptide_contact_fraction_min:
+    value: 0.25
+    provisional: true
+    scale_reference: "Baker mart1-3 crystal: ~1200 A^2 buried, ~31% from peptide"
+  iptm_margin_empty_min:
+    value: 0.15
+    provisional: true
+  iptm_margin_wt_min:
+    value: 0.10
+    provisional: true
+  n_peptide_contacts_min:
+    value: 6
+    provisional: true
+
+negative_controls:
+  shuffled_sequence:
+    enabled: true
+    n: 100
+  framework_binder_decoy:
+    enabled: true
+    description: "design deliberately placed on alpha1/alpha2 helix; must fail the peptide-dependency gate"
+  calibration_rule: "mirror organisers' 300%-over-negative-control binding call"
+
+ranking:
+  method: lexicographic      # matches official ranking. Do NOT build a weighted composite.
+  order:
+    - iptm_margin_wt         # objective 1: mutation specificity
+    - iptm_margin_empty      # objective 2: peptide dependency
+    - affinity_proxy         # objective 3: rosetta_ddg + prodigy. NEVER reported as KD.
+
+diversity:
+  cluster_method: tm_score
+  cluster_threshold: 0.6
+  max_per_scaffold: 3
+  require_both_tracks: true
+
+submission:
+  columns: ["name", "sequence", "molecule_class"]
+  columns_verified: false    # RE-CHECK THE LIVE SUBMIT FORM BEFORE FREEZING
+  rank_ordered: true
+  include_methods_note: true
+  methods_note_must_state: "which surface we target + link predicted complexes"
+  auto_submit: false         # never. Harjas submits.
+
+novelty_check:
+  enabled: true
+  screen_against:
+    - "JDI / JDIa41b1 / JDIa96b35 TCRs (Immunocore, 7OW4/7OW6)"
+    - "NCI HLA-C*08:02 and A*11:01 G12D TCRs"
+    - "published TCR-mimic antibodies vs KRAS-G12D/HLA-A*11"
+  action_on_hit: hard_fail
