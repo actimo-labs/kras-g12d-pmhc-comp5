@@ -572,3 +572,72 @@ Margins sit near zero (`margin_wt` median +0.028, sd 0.157; `margin_empty` media
 sd 0.322) and **there is no run-to-run variance estimate**, so none of that spread can be
 called signal. The seed replicate is the first thing the overnight run measures. Until it
 lands, no design should be called a hit and no margin threshold should be set.
+
+---
+
+## Stage 07 — seed-replicate noise floor — **THE MOST IMPORTANT PILOT RESULT**
+
+| field | value |
+|---|---|
+| start | 2026-11-07 03:10 | | end | 2026-11-07 03:22 |
+| GPU-h | 0.14 (8 designs × 3 states, seed 1234 vs the pilot's unseeded run) |
+| outputs | `pilot/boltz_rep/rep2_three_state.csv` |
+| status | complete |
+
+### `iptm_margin_wt` is indistinguishable from noise
+
+| design | margin_wt seed A | seed B | \|Δ\| |
+|---|---|---|---|
+| basic_smoke_1_s1 | −0.353 | **+0.185** | **0.538** |
+| neutral_p_21_s4 | +0.056 | −0.240 | 0.295 |
+| neutral_p_24_s2 | +0.263 | +0.021 | 0.242 |
+| neutral_p_6_s1 | +0.063 | −0.080 | 0.143 |
+| neutral_p_22_s2 | +0.268 | +0.145 | 0.123 |
+| neutral_p_4_s2 | −0.038 | −0.117 | 0.078 |
+| basic_p_29_s4 | −0.312 | −0.256 | 0.056 |
+| basic_p_14_s1 | −0.029 | −0.016 | 0.013 |
+
+| metric | within-design seed noise (mean \|Δ\|) | between-design spread (sd, n=32) | **S/N** |
+|---|---|---|---|
+| `iptm_margin_wt` | **0.186** | 0.157 | **0.84×** |
+| `iptm_margin_empty` | 0.173 | 0.322 | 1.86× |
+
+**The seed-to-seed variance of a single design is LARGER than the spread across all 32
+designs.** Ranking on `iptm_margin_wt` ranks the random number generator. `basic_smoke_1_s1`
+moved from the worst design in the set to above the median on a seed change alone;
+`neutral_p_24_s2` went from joint-best (+0.263) to nothing (+0.021).
+
+`iptm_margin_empty` at 1.86× is better but still too weak to gate on without replication.
+
+### Why this outranks every other pilot finding
+
+**Mutation specificity is objective 1 and ranks FIRST** in the official lexicographic order
+(`docs/CHALLENGE_SPEC.md §4`). `docs/PIPELINE.md` Stage 4 names `iptm_margin_wt` as its proxy,
+required "in both models". The pilot says that proxy carries no usable signal at one sample
+per design. **The ranking plan does not currently work**, independent of the disk, the
+schedule, or Chai-1.
+
+This also retrospectively invalidates the Gate 1 criterion-3 analysis: the +0.034 "clean
+separation" and the non-monotonic quartiles were never going to be interpretable against a
+noise floor of 0.17–0.19. The correct reading is not "the differential fails" but
+**"the differential was never measured"** — one sample per design is below the resolution
+needed to measure it at all.
+
+### Two ways out, and what is being measured tonight
+
+| option | cost | status |
+|---|---|---|
+| (a) average *n* diffusion samples in ONE run | model loads once; ~√n noise cut if samples are independent | **`scripts/21_sampletest.sh`, chained after the overnight run** |
+| (b) *n* independent seeded runs | n× full cost — at n=8 this is ~66 GPU-h for Stage 3 alone, infeasible | not attempted |
+| (c) drop `iptm_margin_wt` as the objective-1 proxy | free, but leaves objective 1 with no predictor | **decision for Harjas** |
+
+`scripts/21_sampletest.sh` runs 12 designs spanning the margin range at
+`diffusion_samples=5 --average-samples`, **twice with different seeds**, so the noise of the
+*averaged* estimator is measured exactly as the single-sample noise was. Verdict threshold
+set at S/N > 2.
+
+If (a) works, Stage 3 stays affordable and the ranking survives. If it does not, objective 1
+has no model-based proxy and the honest options are to rank on objective 2 (peptide
+dependency, where geometry does discriminate: 68.3 vs 0.0 Å² buried) and declare objective 1
+unpredicted — which is defensible, since `docs/PIPELINE.md §3` already says "no method
+reliably predicts the WT-vs-G12D window for a de novo binder".

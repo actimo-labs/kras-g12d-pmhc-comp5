@@ -135,28 +135,52 @@ def write_yaml(path: Path, binder: str, target: dict[str, str], template: Path) 
     return order
 
 
-def parse_confidence(pred_root: Path, name: str, order: list[str]) -> dict | None:
-    hits = sorted(pred_root.rglob(f"confidence_{name}_model_0.json"))
+def parse_confidence(pred_root: Path, name: str, order: list[str],
+                     average_samples: bool = False) -> dict | None:
+    """Read binder<->target pair ipTM.
+
+    With `average_samples`, average across ALL diffusion samples (model_0,
+    model_1, ...) instead of taking model_0 alone. This exists because the
+    pilot measured single-sample `iptm_margin_wt` to have signal-to-noise of
+    0.84 -- the seed-to-seed variance of one design exceeded the spread across
+    all 32 designs, so the single-sample ranking was measuring the RNG. If
+    averaging n samples cuts the noise by ~sqrt(n), it is far cheaper than n
+    separate runs because the model loads once.
+    """
+    hits = sorted(pred_root.rglob(f"confidence_{name}_model_*.json"))
     if not hits:
         return None
-    data = json.loads(hits[0].read_text())
-    pair = data.get("pair_chains_iptm") or {}
+    if not average_samples:
+        hits = [h for h in hits if h.name.endswith("_model_0.json")] or hits[:1]
+
+    datas = [json.loads(h.read_text()) for h in hits]
+
+    def avg(key, default=None):
+        vals = [d.get(key) for d in datas]
+        vals = [v for v in vals if isinstance(v, (int, float))]
+        return sum(vals) / len(vals) if vals else default
+
+    data = datas[0]
+    pair_list = [d.get("pair_chains_iptm") or {} for d in datas]
+    pair = pair_list[0]
 
     def pair_val(i: int, j: int):
         got = []
-        for a, b in ((i, j), (j, i)):
-            try:
-                got.append(float(pair[str(a)][str(b)]))
-            except (KeyError, TypeError, ValueError):
-                continue
+        for pc in pair_list:                      # average over samples too
+            for a, b in ((i, j), (j, i)):
+                try:
+                    got.append(float(pc[str(a)][str(b)]))
+                except (KeyError, TypeError, ValueError):
+                    continue
         return sum(got) / len(got) if got else None
 
     bi = order.index(BINDER_ID)
     out = {
-        "complex_plddt": data.get("complex_plddt"),
-        "complex_iplddt": data.get("complex_iplddt"),
-        "global_iptm": data.get("iptm"),   # recorded, NEVER used to rank
-        "ptm": data.get("ptm"),
+        "n_samples_averaged": len(datas),
+        "complex_plddt": avg("complex_plddt"),
+        "complex_iplddt": avg("complex_iplddt"),
+        "global_iptm": avg("iptm"),        # recorded, NEVER used to rank
+        "ptm": avg("ptm"),
     }
     for cid, label in ((HEAVY_ID, "mhc"), (B2M_ID, "b2m"), (PEP_ID, "peptide")):
         out[f"iptm_binder_{label}"] = (
@@ -221,6 +245,8 @@ def main() -> int:
                     help="Boltz RNG seed. Set it to measure run-to-run variance: "
                          "without a noise estimate a margin spread cannot be "
                          "distinguished from sampling jitter.")
+    ap.add_argument("--average-samples", action="store_true",
+                    help="average over all diffusion samples, not just model_0")
     ap.add_argument("--only", default=None,
                     help="comma-separated candidate_ids to restrict to")
     args = ap.parse_args()
@@ -314,7 +340,7 @@ def main() -> int:
         for state in states:
             pdir = args.out / args.tag / state / "pred"
             order = orders[(state, name)]
-            c = parse_confidence(pdir, name, order)
+            c = parse_confidence(pdir, name, order, args.average_samples)
             if c is None:
                 row[f"{state}_status"] = "failed"
                 continue
