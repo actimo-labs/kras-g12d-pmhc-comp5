@@ -12,8 +12,8 @@ challenge:
   deadline_aoe: "2026-11-08T23:59:00-12:00"
   deadline_melbourne: "2026-11-09T22:59:00+11:00"
   internal_freeze_melbourne: "2026-11-09T18:00:00+11:00"
-  track: UNCONFIRMED          # prior rounds were Track 3 -> cap 20. CONFIRM WITH HARJAS.
-  max_designs: 20             # 40 for Track 1, 20 for Tracks 2/3
+  track: 3                    # CONFIRMED by Harjas 2026-11-07
+  max_designs: 20             # Track 3 cap. 40 is Track 1 only.
   length_min: 10
   length_max: 250
   allowed_formats: [single_chain_protein, nanobody, scFv, Fab]
@@ -87,12 +87,24 @@ generation:
   track_a1:
     model: rfdiffusion
     source: "reuse tnf-a-comp2/rfdiffusion.sh"
-    n_backbones: 3500
+    # REVISED 2026-11-07 from 3500, approved by Harjas ("whatever is good for
+    # efficiency and performance").
+    # Measured 64.9 s/backbone on the 190-residue crop (2076 s / 32). 3500 would
+    # be ~63 GPU-h against a ~16 GPU-h block -- 3.9x over. 900 is ~16.2 GPU-h.
+    # Volume is also not the constraint it was assumed to be: the pilot got
+    # 32/32 backbones contacting the peptide and 47% hitting all four hotspots,
+    # against PIPELINE.md's expectation that "only a small fraction" would. The
+    # funnel from 900 (x4 seqs x2 pools, ~80% composition pass, 1 per
+    # backbone/pool) still yields ~1800 candidates for a 600-design Stage 3.
+    n_backbones: 900
     enabled: true
   track_a2:
     model: freebindcraft
     n_designs: 800
-    enabled: true
+    enabled: false          # NOT INSTALLED (Stage 00 audit) and no budget to
+                            # add a generator after the pilot. RFdiffusion
+                            # yield makes a second generator unnecessary for
+                            # volume; it would only have added pose diversity.
   track_b:
     model: rfantibody
     format: nanobody
@@ -122,7 +134,13 @@ cofolding:
     states: [g12d]
     keep_top_n: 600
   full_matrix:
-    models: [boltz2, chai1]
+    # Chai-1 dropped 2026-11-07, approved by Harjas ("okay if boltz2 does the
+    # job"). It is not installed, and the two-model consensus it was meant to
+    # provide was aimed at the ipTM differentials -- which the seed replicate
+    # showed are at the noise floor anyway. A second model would have averaged
+    # two noisy estimates rather than producing a reliable one. Ranking now
+    # rests on folded-complex geometry, which is single-model by nature.
+    models: [boltz2]
     states: [g12d, wt, empty]
   antibody_track_extra:
     model: opendde
@@ -158,10 +176,38 @@ negative_controls:
 
 ranking:
   method: lexicographic      # matches official ranking. Do NOT build a weighted composite.
+  # REVISED 2026-11-07 after the pilot, approved by Harjas ("agree with your
+  # metric evaluation"). The original order is kept below for audit.
+  #
+  # WHY: the seed replicate measured iptm_margin_wt at signal-to-noise 0.84 --
+  # the seed-to-seed variance of ONE design (mean |d| 0.186) exceeded the spread
+  # across ALL 32 designs (sd 0.157). One design moved -0.353 -> +0.185 on a
+  # seed change alone. Ranking on it ranks the random number generator.
+  # iptm_margin_empty is better (S/N 1.86) but still too weak to gate on.
+  # Geometry, by contrast, separates cleanly: bsa_peptide median 68.3 A^2 for
+  # peptide-targeted designs vs 0.0 A^2 for beta2m framework decoys.
+  # See results/RUNLOG.md Stage 07.
   order:
-    - iptm_margin_wt         # objective 1: mutation specificity
-    - iptm_margin_empty      # objective 2: peptide dependency
-    - affinity_proxy         # objective 3: rosetta_ddg + prodigy. NEVER reported as KD.
+    - peptide_geometry       # objective 2 proxy, PROMOTED: bsa_peptide +
+                             # n_peptide_contacts + hotspot coverage, measured
+                             # on the FOLDED complex. The only metric shown to
+                             # discriminate framework from peptide binders.
+    - iptm_margin_empty      # objective 2, demoted to tiebreak (S/N 1.86)
+    - affinity_proxy         # objective 3: interface BSA + contact density.
+                             # NEVER reported as a K_D.
+  objective_1_status: |
+    UNPREDICTED. Mutation specificity ranks first officially, but no metric
+    available to us resolves it: iptm_margin_wt is at the noise floor, and
+    PyRosetta/PRODIGY are not installed. docs/PIPELINE.md section 3 already
+    concedes "no method reliably predicts the WT-vs-G12D window for a de novo
+    binder". iptm_margin_wt is still RECORDED for every design, but it is not
+    used to rank unless scripts/21_sampletest.sh shows that averaging over
+    diffusion samples lifts it above S/N 2. Do not claim mutation specificity
+    in the methods note on the strength of it.
+  superseded_order:          # original, kept for audit only
+    - iptm_margin_wt
+    - iptm_margin_empty
+    - affinity_proxy
 
 diversity:
   cluster_method: tm_score
