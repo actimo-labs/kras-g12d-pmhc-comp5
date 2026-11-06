@@ -63,11 +63,25 @@ conformational_states:
 hotspots:
   chain: C
   primary: [4, 5, 7, 8]    # exposed central bulge
-  tracked_not_targeted: [6] # mutant Asp - buried in bulge_down state
+  tracked_not_targeted: [6, 9] # p6 mutant Asp (buried in bulge_down); p9 Gly
   anchors_excluded: [1, 10] # p1 Val A-pocket, p10 Lys F-pocket
   exclude_regions: ["chain A alpha1 helix", "chain A alpha2 helix", "chain B"]
   note: "Hotspots reference the TARGET chain's renumbered residues AFTER cropping. Assert in code."
   crop_shell_angstrom: 15
+  tracked_rationale:
+    p6: "mutant Asp. Buried in F-pocket in bulge_down (7OW6). Contact-accounted, not targeted."
+    p9: "Gly9 is one of the four critical positions in the Poole & Karuppiah 2022 alanine
+         scan (D6, G4, A5, G9). Added to tracked_not_targeted 2026-11-07 - it was previously
+         unclassified, which meant contact accounting silently ignored a position the
+         reference TCR depends on. Tracked, NOT promoted to a primary hotspot: no structural
+         evidence yet in this repo that p9 is solvent-exposed in the bulge_down state, and
+         RFdiffusion hotspot conditioning on a buried residue wastes backbones."
+  low_side_chain_positions: [4, 5, 7, 9]
+  low_side_chain_note: "p4 G, p5 A, p7 G, p9 G - Gly/Ala, minimal or no side chain. This
+    interface is carried by SHAPE COMPLEMENTARITY and ELECTROSTATICS, not side-chain packing.
+    Do NOT treat weak per-residue side-chain contact at these positions as a failed design;
+    score them on backbone/Cbeta proximity and buried area, not on side-chain contact counts.
+    Applies to the peptide_contact_fraction definition in scripts/*_metrics*."
 
 generation:
   track_a1:

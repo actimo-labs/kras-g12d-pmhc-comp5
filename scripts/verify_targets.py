@@ -1,7 +1,10 @@
 import yaml, sys
+from pathlib import Path
 
-CFG = "/mnt/user-data/uploads/configs/challenge.yaml"
+ROOT = Path(__file__).resolve().parent.parent
+CFG = ROOT / "configs" / "challenge.yaml"
 cfg = yaml.safe_load(open(CFG))
+print(f"config: {CFG}")
 
 VALID = set("ACDEFGHIKLMNPQRSTVWY")
 ok = True
@@ -51,8 +54,10 @@ print("\nHOTSPOT SANITY (peptide chain C)")
 hs = cfg["hotspots"]
 for p in hs["primary"]:
     print(f"  p{p:<2d} = {g12d[p-1]}  (primary hotspot)")
+_tr = hs.get("tracked_rationale", {}) or {}
 for p in hs["tracked_not_targeted"]:
-    print(f"  p{p:<2d} = {g12d[p-1]}  (tracked, buried in bulge_down)")
+    why = _tr.get(f"p{p}", "").split(".")[0].strip() or "no rationale recorded in config"
+    print(f"  p{p:<2d} = {g12d[p-1]}  (tracked, not targeted) -- {why}")
 for p in hs["anchors_excluded"]:
     print(f"  p{p:<2d} = {g12d[p-1]}  (anchor, excluded)")
 covered = sorted(hs["primary"] + hs["tracked_not_targeted"] + hs["anchors_excluded"])
@@ -75,7 +80,7 @@ print(f"  provisional thresholds still to calibrate: {prov}")
 print("\n" + ("ALL SEQUENCE CHECKS PASSED" if ok else "*** CHECKS FAILED — DO NOT PROCEED ***"))
 
 # emit FASTA for the three assay states
-out = "/tmp/claude-0/-home-claude/a45be8bd-58e1-50e8-9eb3-6cc2a283c48a/scratchpad/target_states.fasta"
+out = ROOT / "configs" / "target_states.fasta"
 hc, b2m = t["heavy_chain"]["seq"], t["b2m"]["seq"]
 with open(out, "w") as f:
     f.write(f">g12d_A_heavy|HLA-A*11:01|Q5S3G3_25-305\n{hc}\n")

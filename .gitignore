@@ -218,3 +218,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- comp5 run artefacts (added during Stage 0/1) -------------------------
+# Heavy, regenerable, and the box is at 100% disk (see results/RUNLOG.md
+# Stage 00). results/raw is append-only per CLAUDE.md §4 but is NOT tracked;
+# processed metrics and the manifest ARE tracked, they are small and are the
+# audit trail.
+.hydra/
+schedules/
+pilot/
+logs/
+structures/raw/
+structures/*.pdb
+structures/*.cif
+structures/crop/*.pdb
+results/raw/
