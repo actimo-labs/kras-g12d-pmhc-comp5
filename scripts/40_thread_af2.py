@@ -171,11 +171,25 @@ def thread(backbone_pdb: Path, seq: str, out_pdb: Path,
     return rmsd
 
 
-def read_selected(mpnn_root: Path, pools: list[str]) -> dict[str, tuple[str, str]]:
-    """candidate_id -> (backbone_stem, sequence), from the SELECTED fastas."""
+def read_selected(mpnn_root: Path, pools: list[str],
+                  use_all: bool = False) -> dict[str, tuple[str, str]]:
+    """candidate_id -> (backbone_stem, sequence).
+
+    use_all=False reads the pre-selected fastas (one per backbone per pool).
+    use_all=True reads EVERY MPNN sequence.
+
+    Screening all of them is the correct protocol and the pilot showed why.
+    Pre-selection ranked by MPNN global_score, and MPNN score does not predict
+    AF2 success: of 32 pre-selected designs only 1 cleared the canonical AF2
+    criteria, and the designs our calibrated Boltz gates liked best scored
+    pae_interaction 25-28. Picking one sequence per backbone on a metric that
+    does not correlate with the filter throws away most of the diversity MPNN
+    produced, for no gain. AF2-ig at ~10 s/design makes screening all of them
+    affordable.
+    """
     out: dict[str, tuple[str, str]] = {}
     for pool in pools:
-        d = mpnn_root / "selected" / pool / "seqs"
+        d = (mpnn_root / pool / "seqs") if use_all else (mpnn_root / "selected" / pool / "seqs")
         if not d.exists():
             continue
         for fa in sorted(d.glob("*.fa")):
@@ -193,7 +207,11 @@ def read_selected(mpnn_root: Path, pools: list[str]) -> dict[str, tuple[str, str
                 s = seq.split("/")[0]
                 if not s:
                     continue
-                cid = fa.stem
+                if use_all:
+                    m = re.search(r"sample=(\d+)", _hdr)
+                    cid = f"{pool}_{fa.stem}_s{m.group(1) if m else len(out)}"
+                else:
+                    cid = fa.stem
                 # <pool>_<backbone>_s<N> -> <backbone>
                 core = cid.split("_", 1)[1] if cid.split("_", 1)[0] in pools else cid
                 bb = re.sub(r"_s\d+$", "", core)
@@ -210,12 +228,15 @@ def main() -> int:
     ap.add_argument("--crop", type=Path, default=ROOT / "structures/crop/g12d_crop.pdb",
                     help="side-chain-bearing target, superposed into the output frame")
     ap.add_argument("--no-sidechain-target", action="store_true")
+    ap.add_argument("--all", action="store_true",
+                    help="thread EVERY MPNN sequence, not the pre-selected subset")
     args = ap.parse_args()
 
     pools = [p.strip() for p in args.pools.split(",") if p.strip()]
-    sel = read_selected(args.mpnn, pools)
+    sel = read_selected(args.mpnn, pools, use_all=args.all)
     if not sel:
-        raise SystemExit(f"no selected sequences under {args.mpnn}/selected")
+        where = "" if args.all else "/selected"
+        raise SystemExit(f"no sequences under {args.mpnn}{where}")
 
     args.out.mkdir(parents=True, exist_ok=True)
     rows, missing, bad = [], [], []
