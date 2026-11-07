@@ -13,6 +13,12 @@
 # it finishes, so the chunk loop just counts what is already on disk and asks
 # for the remainder. A crash or a VM restart costs at most one chunk.
 #
+# inference.write_trajectory=False is NOT optional here. The default True dumps
+# two denoising-trajectory PDBs per design, which measured 6.0 GB for the first
+# 532 backbones -- 79x the 76 MB the actual designs occupy. Nothing in this repo
+# reads them (grep traj scripts/ src/ -> nothing). At 900 backbones they would
+# have taken ~10 GB on a box with 24 G free that still needs ~11 GB for Stage 3.
+#
 # Length band 65-85 aa keeps every design inside the published 40-100 aa
 # molecule category 1. A smaller out-of-band block is generated separately at
 # the end for category hedging, per docs/PIPELINE.md Stage 2.
@@ -49,6 +55,7 @@ while [ "$(have)" -lt "$TARGET" ]; do
     'contigmap.contigs=[A1-180/0 C1-10/0 65-85]' \
     'ppi.hotspot_res=[C4,C5,C7,C8]' \
     inference.num_designs="$want" \
+    inference.write_trajectory=False \
     hydra.run.dir=/work/.hydra >> logs/gen_stage2.log 2>&1
   rc=$?
   e=$(date +%s)
