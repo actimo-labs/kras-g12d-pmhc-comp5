@@ -1202,3 +1202,44 @@ parser that had half-worked would have screened a biased subset without saying s
 
 RFdiffusion and AF2 coexisted without trouble earlier in the pilot, and the two write to
 separate trees.
+
+---
+
+## Stage 18 — beta diversity arm delivers real topology spread (n=150)
+
+150 backbones, ~4 h, 22 MB.
+
+| | default `Complex_base` (n=900) | **beta `Complex_beta_ckpt`** (n=150) |
+|---|---|---|
+| helical fraction, median | 0.901 | **0.772** |
+| extended fraction, median | 0.014 | **0.065** |
+| extended >10% | 4 (**0%**) | 46 (**31%**) |
+| extended >20% | 0 (0%) | 30 (**20%**) |
+| mostly-helical (>80%) | 843 (**94%**) | 61 (**41%**) |
+
+**This corrects the Stage 17 assessment, which called the shift "modest" on n=2.** At n=150 it
+is substantial: a third of beta designs carry real extended content against none in the
+default arm, and the mostly-helical share falls from 94% to 41%. The monoculture flagged
+earlier is genuinely broken by this arm.
+
+That is the third time today a sample under n=30 produced a directional conclusion that larger
+n reversed — the MPNN weight-set comparison (n=4 said marginal, n=1800 said substantial), the
+AF2 pass rate (n=32 said 3.1%, n=272 said 0.7%), and now this. The pattern is consistent
+enough to be a rule: **do not state a direction from n<30 in this project.** Each of those
+small samples was cheap to take and each cost a retraction.
+
+What this does *not* establish: that beta-topology designs make better interfaces. Topology
+diversity is a submission-diversity objective (`docs/PIPELINE.md §5`), not an affinity
+argument. Whether these designs survive the AF2 screen at a better or worse rate than the
+helical arm is a separate question, and the screen will answer it — the beta designs are
+labelled and screened as their own cohort so the comparison is measurable.
+
+### Screening order
+
+The 7,200-design helical screen is already mid-flight and `predict_pdb.py` enumerated its
+input directory at startup, so the 1,200 beta designs are screened as a **second, sequential
+run** rather than being dropped into the live directory. Adding files underneath a running
+screen would either be ignored or force a restart that discards the current compile state.
+
+Projected: helical screen ends ~Sun 19:40 Melbourne, beta screen +3.3 h to ~23:00, Boltz on
+survivors ~7 h to Mon ~06:00, ranking and audit ~3 h to ~09:00, against an 18:00 freeze.
