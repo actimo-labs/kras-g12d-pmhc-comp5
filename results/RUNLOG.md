@@ -1109,3 +1109,48 @@ used only if the hard gate under-fills:
 clustered on perhaps 25–30 distinct backbones (both pilot passers shared backbone `p_3`).
 Enough for 20 submissions, thin for diversity — the topology monoculture noted in Stage 16
 remains the larger worry.
+
+---
+
+## Stage 16 — Stage 2 generation complete; timeline becomes the binding constraint
+
+| field | value |
+|---|---|
+| end | 2026-11-07 21:33 Melbourne |
+| GPU-h | ~16.5 (900 backbones at 64.9 s, minus the restart) |
+| outputs | `gen/rfdiff/g_*.{pdb,trb}` — **900 backbones, 129 MB total** |
+
+The `write_trajectory=False` fix held: zero `traj` directories, 129 MB for 900 backbones
+against the 6.0 GB that 532 backbones had consumed before it.
+
+### Remaining budget, measured not estimated
+
+~44.5 h to the Monday 18:00 freeze.
+
+| stage | cost | basis |
+|---|---|---|
+| beta diversity arm, 150 designs | ~4.5 h | measured 107 s/backbone |
+| MPNN, 4 pools × 2 seqs on 1,050 backbones | ~1–2 h | running |
+| **AF2 screen, ~8,400 candidates** | **~23 h** | measured 10 s/design post-compile |
+| Boltz 3-state ×5 on survivors | ~7 h | measured 39.7 s/prediction |
+| ranking + submission audit | ~3 h | |
+| **total** | **~39 h** | against 44.5 h |
+
+**The AF2 screen is now the critical path and it has no slack.** Risks and the chosen
+mitigations:
+
+- *Partial completion is length-biased.* `predict_pdb.py` sorts by sequence length to
+  minimise JAX compiles (21 distinct lengths × ~2 min each), which is the right trade while
+  the run finishes, but means a run stopped early has seen only short designs. Accepted, with
+  the consequence recorded here: if the screen is cut short, the surviving set is biased
+  towards short binders and that must be stated rather than ranked over.
+- *It is resumable.* Every design is checkpointed, so an interruption costs one design.
+- *Fallback if it overruns:* drop to 1 sequence per pool (4,200 candidates, ~12 h). Not taken
+  now because sequences-per-backbone is the main lever on hit rate at a 0.7% pass rate, and
+  upstream `dl_binder_design` uses 8–48.
+
+### Beta arm deferred behind MPNN
+
+The 150-design beta arm is queued after MPNN rather than run concurrently: RFdiffusion and
+AF2 coexisted happily earlier, but MPNN is short and serialising it removes any chance of the
+two writing interleaved output into the same manifest.

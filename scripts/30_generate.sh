@@ -27,14 +27,19 @@ cd "$(dirname "$0")/.."
 
 TARGET="${1:-900}"
 CHUNK="${2:-60}"
-OUT=gen/rfdiff
+OUT="${3:-gen/rfdiff}"
+PREFIX="${4:-g}"
+# Optional checkpoint override, e.g. Complex_beta_ckpt.pt for the topology
+# diversity arm. Empty means RFdiffusion picks its default (Complex_base for
+# hotspot-conditioned binder design).
+CKPT="${5:-}"
 mkdir -p "$OUT" logs
 
 log() { echo -e "\n=== [$(date -u +%H:%M)] $* ===" ; }
 
-have() { ls "$OUT"/g_*.pdb 2>/dev/null | wc -l; }
+have() { ls "$OUT"/${PREFIX}_*.pdb 2>/dev/null | wc -l; }
 
-log "Stage 2 generation: target ${TARGET} backbones, chunk ${CHUNK}"
+log "Generation: target ${TARGET} into ${OUT} (prefix ${PREFIX}), chunk ${CHUNK}${CKPT:+, ckpt ${CKPT}}"
 echo "already on disk: $(have)"
 
 while [ "$(have)" -lt "$TARGET" ]; do
@@ -49,14 +54,17 @@ while [ "$(have)" -lt "$TARGET" ]; do
 
   echo "[$(date -u +%H:%M)] have ${n}/${TARGET}, generating ${want} more (${avail}G free)"
   s=$(date +%s)
+  CKPT_ARG=()
+  [ -n "$CKPT" ] && CKPT_ARG=(inference.ckpt_override_path="/app/RFdiffusion/models/${CKPT}")
   ./rfdiffusion.sh \
-    inference.output_prefix="/work/${OUT}/g_${n}" \
+    inference.output_prefix="/work/${OUT}/${PREFIX}_${n}" \
+    "${CKPT_ARG[@]}" \
     inference.input_pdb=/work/structures/crop/g12d_crop.pdb \
     'contigmap.contigs=[A1-180/0 C1-10/0 65-85]' \
     'ppi.hotspot_res=[C4,C5,C7,C8]' \
     inference.num_designs="$want" \
     inference.write_trajectory=False \
-    hydra.run.dir=/work/.hydra >> logs/gen_stage2.log 2>&1
+    hydra.run.dir=/work/.hydra >> "logs/gen_${PREFIX}.log" 2>&1
   rc=$?
   e=$(date +%s)
   echo "  chunk rc=${rc} wall=$((e-s))s  total now $(have)"
