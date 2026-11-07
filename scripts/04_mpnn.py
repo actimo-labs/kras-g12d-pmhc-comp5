@@ -7,9 +7,24 @@ only the bias pool changes. Target held as fixed context; binder chain designed.
 
 TWO POOLS, kept separate so we can tell afterwards whether the bias did anything
 --------------------------------------------------------------------------------
-  neutral -- SolubleMPNN, no bias. The control.
-  basic   -- SolubleMPNN with a mild Arg/Lys bias applied ONLY at binder
-             positions that project over peptide p6.
+  sol_neutral  -- SolubleMPNN, no bias. The original control.
+  sol_basic    -- SolubleMPNN + positional Arg/Lys bias over peptide p6.
+  van_neutral  -- vanilla ProteinMPNN, no bias.
+  van_basic    -- vanilla ProteinMPNN + the same positional bias.
+
+WHY VANILLA WEIGHTS WERE ADDED (2026-11-07, approved by Harjas)
+---------------------------------------------------------------
+SolubleMPNN is trained to raise surface charge to discourage aggregation, and on
+these backbones it overshoots badly: measured 0.52-0.67 charged fraction against
+~0.25-0.30 typical for de novo minibinders, with median net charge -7.
+
+Composition then tracked AF2 interface quality monotonically across quartiles
+(best 0.324 hydrophobic / 0.566 charged; worst 0.256 / 0.671), and designs with
+hydrophobic >=0.38 scored median pae_interaction 24.15 against 26.89 for <0.30.
+The effect is modest and every quartile still failed, so this is a contributing
+factor rather than the cause -- which is exactly why both weight sets are run as
+SEPARATE LABELLED POOLS instead of switching outright. Assuming vanilla is
+better would repeat the mistake the two-pool design exists to avoid.
 
 WHY POSITIONAL AND NOT GLOBAL BIAS
 ----------------------------------
@@ -53,6 +68,19 @@ MPNN = Path(os.environ.get("PROTEINMPNN_DIR",
                            Path.home() / "tnf-track3" / "ProteinMPNN"))
 BINDER_CHAIN = "A"
 TARGET_CHAIN = "B"
+
+# pool name -> (weight set, positional R/K bias). Both weight sets get the same
+# Ala de-bias and the same bias geometry, so the only variable between a sol_*
+# and van_* pool is the ProteinMPNN weight set itself.
+POOL_SPEC = {
+    "sol_neutral": {"soluble": True,  "bias": False},
+    "sol_basic":   {"soluble": True,  "bias": True},
+    "van_neutral": {"soluble": False, "bias": False},
+    "van_basic":   {"soluble": False, "bias": True},
+    # legacy names from the pilot, kept so old invocations still work
+    "neutral":     {"soluble": True,  "bias": False},
+    "basic":       {"soluble": True,  "bias": True},
+}
 PEPTIDE_CHAIN = "C"          # original chain id of the peptide, pre-renumbering
 
 
@@ -176,7 +204,8 @@ def main() -> int:
     ap.add_argument("--bias-weight", type=float, default=1.2)
     ap.add_argument("--bias-radius", type=float, default=12.0)
     ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--pools", default="neutral,basic")
+    ap.add_argument("--pools",
+                    default="sol_neutral,sol_basic,van_neutral,van_basic")
     ap.add_argument("--seed", type=int, default=37)
     args = ap.parse_args()
 
@@ -200,6 +229,9 @@ def main() -> int:
          f"--chain_list={BINDER_CHAIN}"])
 
     pools = [p.strip() for p in args.pools.split(",") if p.strip()]
+    unknown = [p for p in pools if p not in POOL_SPEC]
+    if unknown:
+        raise SystemExit(f"unknown pool(s) {unknown}; known: {sorted(POOL_SPEC)}")
 
     # GLOBAL Ala de-bias, applied to BOTH pools.
     #
@@ -217,7 +249,7 @@ def main() -> int:
     print(f"global Ala bias {args.ala_bias} -> {aa_bias_path.name}, sampling_temp {args.temp}")
 
     bias_path = args.out / "bias_by_res.jsonl"
-    if "basic" in pools:
+    if any(POOL_SPEC[p]["bias"] for p in pools):
         print("building positional R/K bias")
         basic_bias_jsonl(staged_dir, bias_path, args.bias_radius, args.bias_weight)
 
@@ -241,9 +273,10 @@ def main() -> int:
                # so disulfide-dependent designs are a risk we decline. Cheaper to
                # forbid now than to discard finished designs at ranking.
                "--omit_AAs", "CX",
-               "--bias_AA_jsonl", aa_bias_path,
-               "--use_soluble_model"]
-        if pool == "basic":
+               "--bias_AA_jsonl", aa_bias_path]
+        if POOL_SPEC[pool]["soluble"]:
+            cmd += ["--use_soluble_model"]
+        if POOL_SPEC[pool]["bias"]:
             cmd += ["--bias_by_res_jsonl", bias_path]
         run(cmd)
         n = len(list((folder / "seqs").glob("*.fa")))

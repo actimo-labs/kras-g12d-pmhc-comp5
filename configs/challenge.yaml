@@ -105,6 +105,26 @@ generation:
                             # add a generator after the pilot. RFdiffusion
                             # yield makes a second generator unnecessary for
                             # volume; it would only have added pose diversity.
+  track_a1_beta:
+    model: rfdiffusion
+    checkpoint: Complex_beta_ckpt.pt
+    n_backbones: 150
+    enabled: true
+    purpose: topology_diversity
+    rationale: |
+      Measured monoculture in the pilot: 32/32 backbones >50% helical, median
+      helical fraction 0.91, only 1/32 with any extended content.
+      docs/PIPELINE.md section 5 explicitly warns against all submissions
+      converging on one tool and one binding mode, and we were there.
+      Complex_beta_ckpt.pt ships with the RFdiffusion image (no new dependency)
+      and is RFdiffusion's own topology-diversity checkpoint. Smoke test on n=2:
+      extended fraction 0.10 vs 0.01 default, helical 0.84 vs 0.91. A real but
+      MODEST shift, and it costs ~70% more per backbone (1.79 vs 1.04 min).
+      NOT a fix for the 99% pae_interaction failure rate -- this is a diversity
+      hedge, not an interface-quality intervention. It is specifically NOT the
+      beta-pairing-TARGETED conditioning of Sappington et al. (Nat Commun 2025),
+      which conditions binder strands to pair with target edge strands and does
+      report improved affinity; that needs conditioning machinery we do not have.
   track_b:
     model: rfantibody
     format: nanobody
@@ -116,6 +136,20 @@ generation:
 
 sequence_design:
   models: [proteinmpnn, solublempnn]
+  # 4 labelled pools, 2 sequences each = 8 per backbone. Approved by Harjas
+  # 2026-11-07 ("run both MPNN pools"). Vanilla was added because SolubleMPNN
+  # overshoots surface charge on these backbones (0.52-0.67 charged vs ~0.25-0.30
+  # typical) and composition tracked AF2 quality monotonically. First n=4 check
+  # shows vanilla is only MODESTLY less charged (0.464 vs 0.490, net -6 vs -10)
+  # with hydrophobic unchanged -- so the charge is mostly from the helical
+  # backbones and the Ala de-bias, not the weight set. Both run as separate
+  # pools so this is measured at scale rather than assumed.
+  pool_spec:
+    sol_neutral: {weights: soluble, bias: none}
+    sol_basic:   {weights: soluble, bias: positional_RK_over_p6}
+    van_neutral: {weights: vanilla, bias: none}
+    van_basic:   {weights: vanilla, bias: positional_RK_over_p6}
+  seqs_per_pool: 2
   pools:
     neutral:
       bias: null
