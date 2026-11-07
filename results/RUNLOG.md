@@ -973,7 +973,7 @@ Verified after the move: CSVs read through the symlinks, `scripts/11_gate1.py` s
 its inputs, and Stage 2 generation was unaffected. `pilot/af2_all` was deliberately left in
 place because it was mid-run.
 
-**Not done, needs Harjas:** the `/etc/fstab` entry. Writing it is blocked here as unauthorised
+**fstab entry added by Harjas 2026-11-07** — `UUID=812876ce.../mnt/comp5data ext4 defaults,noatime,nofail 0 2`, UUID verified against the device and `nofail` set so a detached disk cannot block boot. The mount is now permanent.
 persistence. The mount is live for this session, which covers the run to Monday, but it will
 not survive a reboot. To make it permanent:
 
