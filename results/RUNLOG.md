@@ -983,3 +983,72 @@ not survive a reboot. To make it permanent:
 
 Disk pressure is no longer a constraint: 25 G free on `/` plus 982 G on `/mnt/comp5data`,
 against a Stage 3 requirement of ~11 G.
+
+---
+
+## Stage 14 — AF2 screen on all 272 pilot sequences, and a failed validation attempt
+
+### Pass rate is 0.7%, not the 3.1% estimated from n=32
+
+| | n=32 (pre-selected) | **n=272 (all MPNN sequences)** |
+|---|---|---|
+| pass all criteria | 1 (3.1%) | **2 (0.7%)** |
+| median `pae_interaction` | 27.03 | 26.78 |
+| median `target_aligned_rmsd` | 40.7 | **43.6** |
+| failure mode | 30/32 `pae>=10` | **269/272 `pae>=10`** |
+
+The n=32 figure was optimistic because those 32 were selected by MPNN score, and the whole
+point of Stage 14 is that MPNN score does not predict AF2 success. 0.7% is the honest number.
+
+Both passers — `neutral_p_3_s2` (pae 4.92) and `basic_p_3_s2` (pae 5.21) — come from the
+**same backbone, `p_3`**. So 1 backbone in 34 produced anything viable, and the two hits are
+not independent. Clustering by backbone is itself evidence the signal is structured rather
+than random noise.
+
+Composition correlates with AF2 interface quality, monotonically across quartiles:
+
+| quartile by pae | median pae | hydrophobic | charged |
+|---|---|---|---|
+| best | 25.22 | 0.324 | 0.566 |
+| Q2 | 26.53 | 0.304 | 0.587 |
+| Q3 | 26.99 | 0.286 | 0.611 |
+| worst | 27.30 | 0.256 | 0.671 |
+
+Hydrophobic ≥0.38 → median pae 24.15; <0.30 → 26.89. The direction is consistent and argues
+for dropping SolubleMPNN, whose 0.52–0.67 charged fraction is roughly double the typical de
+novo minibinder. But the effect is small and **every quartile still fails**, so composition is
+a contributing factor, not the cause.
+
+### The positive control I built was invalid — my error
+
+Before committing ~20 GPU-h to the full screen I tried to validate the setup by running
+AF2-ig on the real crystallographic TCR–pMHC interface from 7OW6 (TCR chains D+E merged as
+the binder, platform+peptide as the target). Result:
+
+```
+pae_interaction 28.11   plddt_binder 29.2   binder_aligned_rmsd 28.78   plddt_target 94.23
+```
+
+A validated binder scoring as badly as our worst designs would mean the setup is broken. It
+does not mean that, because **the control is not a fair test and that is my mistake**:
+`plddt_binder` of 29.2 says AF2 could not fold the 426-residue two-domain TCR at all from a
+single sequence with no MSA. AF2-initial-guess works precisely because the binder is a small
+de novo miniprotein foldable single-sequence while the target is templated. A TCR is outside
+that regime, so the number says nothing about our designs.
+
+What the control *did* confirm: `plddt_target` 94.23, so target templating via the
+superposed side-chain crop is working correctly.
+
+### The correct control, now running
+
+Composition-matched **shuffled** sequences threaded onto the same backbones (n=32). The
+question is whether AF2 separates real designs from scrambles on this target:
+
+- if scrambles score clearly worse than 26.8, `pae_interaction` has signal here and our
+  designs are simply mediocre — the two passers are real and the screen is worth running;
+- if scrambles score the same ~27, `pae_interaction` is saturated for this target and must
+  **not** be used as the primary gate, in which case the pipeline falls back to the calibrated
+  Boltz geometry + confidence scheme.
+
+**The 20 GPU-h full screen is held until this returns.** Committing to it on an unvalidated
+metric is exactly the mistake the earlier `iptm_margin_wt` work was supposed to teach.
