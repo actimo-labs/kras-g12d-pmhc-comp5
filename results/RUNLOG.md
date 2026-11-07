@@ -1243,3 +1243,54 @@ screen would either be ignored or force a restart that discards the current comp
 
 Projected: helical screen ends ~Sun 19:40 Melbourne, beta screen +3.3 h to ~23:00, Boltz on
 survivors ~7 h to Mon ~06:00, ranking and audit ~3 h to ~09:00, against an 18:00 freeze.
+
+---
+
+## Stage 19 — interim screen (2,000/7,200): the composition hypothesis does not survive
+
+Screened in length-sorted order, so these are the shortest designs (65–70 aa).
+
+| pool | n | pae median | pae best | pae<10 | plddt median | binder_rmsd median |
+|---|---|---|---|---|---|---|
+| sol_neutral | 500 | 26.74 | **5.05** | **2** | 90.1 | 1.54 |
+| sol_basic | 500 | 26.80 | 12.05 | 0 | 90.2 | 1.58 |
+| van_neutral | 500 | 26.83 | 8.02 | **2** | 88.2 | 1.66 |
+| van_basic | 500 | 26.83 | 15.82 | 0 | 89.1 | 1.74 |
+
+**Vanilla's better composition has not translated into better interfaces.** The pae medians are
+identical to two decimal places across all four pools (26.74–26.83), and both full-criteria
+passes so far are `sol_neutral`. This is a clean correlation-versus-causation failure and it
+is mine: composition *correlated* with pae in the pilot (best quartile 0.324 hydrophobic vs
+worst 0.256), so I used it to justify adding vanilla pools — but *intervening* on composition
+moved composition (0.413 vs 0.311 hydrophobic, net −4 vs −8) and did not move pae at all.
+A correlate of quality is not a lever on quality.
+
+The decision to run both pools rather than switch to vanilla outright is what makes this
+visible instead of invisible. Had I switched, the pipeline would have shipped vanilla-only
+designs on a rationale the data does not support.
+
+**The `basic` pools have zero passes in 1,000 designs** against 4 in 1,000 for the neutral
+pools. Numbers far too small to conclude from, but the positional R/K bias is a HYPOTHESIS
+(so labelled in the config since the start) and nothing yet supports it. Watch, do not act.
+
+Binder length does not shift the median: 26.75–26.87 flat across 65–70 aa, with hits appearing
+at 67/69/70 as rare tail events rather than a trend. So the length-sorted ordering is less of a
+bias on the *rate* than feared.
+
+### Yield risk is now the live problem
+
+Interim full-criteria rate is **2/2000 = 0.10%**, against 0.7% in the pilot. The pilot figure
+came from 272 designs on 34 backbones and was itself revised down from 3.1%; the honest range
+for the final 7,200 is wide, roughly **7–50 survivors**, most plausibly 15–25.
+
+**That may not fill 20 submission slots on the hard gate alone.** The fallback is already
+validated and does not need inventing:
+
+1. `pae_interaction < 10` — primary, published, tail-validated against scrambles (0/32)
+2. then rank by `binder_aligned_rmsd` and `plddt_binder`, which separated real designs from
+   composition-matched scrambles by **+21.3 Å** and **−19.1 points** respectively (Stage 15)
+3. then the Boltz three-state differential at 5 samples
+
+Designs promoted via step 2 rather than step 1 must be labelled as such in the submission
+manifest and the methods note. They clear a validated fold-self-consistency bar but **not** the
+published interface criterion, and saying otherwise would misrepresent them.
