@@ -1052,3 +1052,60 @@ question is whether AF2 separates real designs from scrambles on this target:
 
 **The 20 GPU-h full screen is held until this returns.** Committing to it on an unvalidated
 metric is exactly the mistake the earlier `iptm_margin_wt` work was supposed to teach.
+
+---
+
+## Stage 15 — the correct negative control: AF2-ig setup VALIDATED, screen released
+
+32 composition-matched shuffled sequences threaded onto the same backbones, vs the 272 real
+designs:
+
+| metric | real (n=272) | scramble (n=32) | separation |
+|---|---|---|---|
+| `pae_interaction` median | 26.78 | 27.14 | **+0.36** |
+| `pae_interaction` best | **4.92** | **19.56** | — |
+| `pae_interaction < 10` | **3/272** | **0/32** | — |
+| `plddt_binder` | **87.9** | 68.8 | **−19.1** |
+| `binder_aligned_rmsd` | **2.03** | 23.30 | **+21.3** |
+| `target_aligned_rmsd` | 43.6 | 45.9 | +2.27 |
+
+### The setup works; `pae_interaction` is stringent, not broken
+
+`plddt_binder` (−19.1) and `binder_aligned_rmsd` (+21.3) separate real sequences from
+composition-matched scrambles decisively. Real sequences fold into the backbone they were
+designed for; scrambles do not. **AF2-ig is functioning correctly on this target**, which is
+what the invalid TCR control in Stage 14 failed to establish.
+
+`pae_interaction` behaves differently from the others and the distinction matters:
+
+- **Saturated in the bulk** — real 26.78 vs scramble 27.14 is no separation at all. Judged on
+  medians alone the metric looks useless.
+- **Discriminating in the tail** — 0 of 32 scrambles reach <10 and the best scramble manages
+  only 19.56, while 3 of 272 real designs clear it.
+
+Both statements are true, and only the second is relevant to how the metric is used. We are
+not averaging `pae_interaction`, we are selecting the extreme tail of it. A median comparison
+would have wrongly condemned the gate. This is the same lesson as Stage 08 in a different
+guise: match the statistic to how the number is actually consumed.
+
+**Decision: the full AF2 screen is released.** `pae_interaction < 10` stays the hard gate,
+with the honest caveat that it is stringent and the expected yield is ~0.7–1.1%.
+
+### A second, cheaper filter emerges
+
+`binder_aligned_rmsd` and `plddt_binder` discriminate strongly and are available for free in
+the same scorefile. They give a graded ranking among designs that fail `pae<10`, which matters
+because at 0.7% yield we may not fill 20 slots on the hard gate alone. Fallback order, to be
+used only if the hard gate under-fills:
+
+1. `pae_interaction < 10` — primary, published, tail-validated here
+2. `binder_aligned_rmsd < 1.5` **and** `plddt_binder > 80` — fold self-consistency, separation
+   +21.3 / −19.1 against scrambles
+3. Boltz three-state differential at 5 samples on whatever survives
+
+### Expected yield for Stage 2
+
+900 backbones × 8 sequences = 7,200 candidates. At the measured 0.7–1.1%: **~50–80 survivors**,
+clustered on perhaps 25–30 distinct backbones (both pilot passers shared backbone `p_3`).
+Enough for 20 submissions, thin for diversity — the topology monoculture noted in Stage 16
+remains the larger worry.
