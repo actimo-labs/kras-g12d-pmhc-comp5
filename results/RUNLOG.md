@@ -1154,3 +1154,51 @@ mitigations:
 The 150-design beta arm is queued after MPNN rather than run concurrently: RFdiffusion and
 AF2 coexisted happily earlier, but MPNN is short and serialising it removes any chance of the
 two writing interleaved output into the same manifest.
+
+---
+
+## Stage 17 — MPNN at scale: vanilla weights are clearly better, correcting Stage 16's n=4 read
+
+7,200 sequences, 900 backbones × 4 pools × 2 sequences, 7,140 s (2.0 h).
+
+| pool | n | hydrophobic | charged | net |
+|---|---|---|---|---|
+| sol_neutral | 1800 | 0.311 | 0.590 | −8 |
+| sol_basic | 1800 | 0.301 | 0.612 | −7 |
+| **van_neutral** | 1800 | **0.413** | **0.457** | **−4** |
+| **van_basic** | 1800 | **0.388** | **0.493** | **−3** |
+
+**This reverses the earlier reading.** On n=4 I measured vanilla at charged 0.464 vs soluble
+0.490 and concluded "most of the charge comes from the backbones and the Ala de-bias, not the
+weight set". At n=1800 the gap is 0.457 vs 0.590 charged and 0.413 vs 0.311 hydrophobic —
+substantial, not marginal. The n=4 sample was worthless and I should not have drawn a
+directional conclusion from it.
+
+Vanilla lands hydrophobic at 0.413, at or above the 0.30–0.40 target band, against soluble's
+0.311. Given that composition tracked AF2 interface quality monotonically (Stage 14), the
+vanilla pools are the better prospect — but both are screened, so this is now a measurement
+rather than a prediction.
+
+Net charge also halves (−4/−3 vs −8/−7), which matters for the electrostatics argument: the
+discriminating feature is a buried Asp making the HLA surface more negative, and a less
+negative binder is better placed to read it.
+
+### Threading bug caught at launch
+
+The first screen launch aborted immediately: *"7200 skipped: backbone not found"*. The
+candidate-id parser stripped the pool prefix with `cid.split("_", 1)[0]`, which yields `sol`
+for `sol_neutral_g_0_s1` — matching no pool, so every backbone lookup failed. Pool names
+introduced in Stage 17 contain underscores; the pilot's names (`neutral`, `basic`) did not,
+which is why it only surfaced now. Fixed to strip by full pool name, longest first. All 7,200
+threaded on the retry.
+
+The abort was loud and immediate rather than silent, which is the one good thing about it: a
+parser that had half-worked would have screened a biased subset without saying so.
+
+### Now running concurrently
+
+- **AF2 screen**, 7,200 designs, ~20 h, resumable and checkpointed per design
+- **Beta diversity arm**, 150 designs, ~4.5 h
+
+RFdiffusion and AF2 coexisted without trouble earlier in the pilot, and the two write to
+separate trees.

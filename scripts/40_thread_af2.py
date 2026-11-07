@@ -212,8 +212,16 @@ def read_selected(mpnn_root: Path, pools: list[str],
                     cid = f"{pool}_{fa.stem}_s{m.group(1) if m else len(out)}"
                 else:
                     cid = fa.stem
-                # <pool>_<backbone>_s<N> -> <backbone>
-                core = cid.split("_", 1)[1] if cid.split("_", 1)[0] in pools else cid
+                # <pool>_<backbone>_s<N> -> <backbone>. Strip by the FULL pool
+                # name, not the first underscore token: pool names such as
+                # "sol_neutral" contain underscores, so split("_",1)[0] gives
+                # "sol", which matches no pool, and backbone resolution then
+                # fails for every design.
+                core = cid
+                for _p in sorted(pools, key=len, reverse=True):
+                    if cid.startswith(_p + "_"):
+                        core = cid[len(_p) + 1:]
+                        break
                 bb = re.sub(r"_s\d+$", "", core)
                 out[cid] = (bb, s)
     return out
