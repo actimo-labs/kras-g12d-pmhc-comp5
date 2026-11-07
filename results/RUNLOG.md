@@ -951,3 +951,35 @@ because Boltz recomputes only the diffusion module per sample while the trunk is
 strict and currently passes 0/32 designs. **It must be recalibrated against 5-sample negative
 controls before it gates anything.** Scheduled with the Stage 3 triage, where 5-sample
 controls become available as a by-product.
+
+---
+
+## Stage 13 — 1 TB disk mounted; bulk outputs relocated
+
+Harjas ran the `mkfs.ext4` + mount by hand (the sandbox blocks device formatting from here,
+correctly). `/dev/sdb` — a 1000 GB GCP PersistentDisk provisioned 2026-11-06, verified zeroed
+and signature-free before formatting — is now **984 G mounted at `/mnt/comp5data`**, writable.
+
+Idle Boltz output trees moved there and symlinked back, so every relative path in the scripts
+keeps working untouched:
+
+| moved | size |
+|---|---|
+| `pilot/boltz` | 659 M |
+| `pilot/boltz_rep` | 225 M |
+| `pilot/boltz_samp` | 637 M |
+
+Verified after the move: CSVs read through the symlinks, `scripts/11_gate1.py` still resolves
+its inputs, and Stage 2 generation was unaffected. `pilot/af2_all` was deliberately left in
+place because it was mid-run.
+
+**Not done, needs Harjas:** the `/etc/fstab` entry. Writing it is blocked here as unauthorised
+persistence. The mount is live for this session, which covers the run to Monday, but it will
+not survive a reboot. To make it permanent:
+
+```
+! UUID=$(sudo blkid -s UUID -o value /dev/sdb); echo "UUID=$UUID /mnt/comp5data ext4 defaults,noatime,nofail 0 2" | sudo tee -a /etc/fstab
+```
+
+Disk pressure is no longer a constraint: 25 G free on `/` plus 982 G on `/mnt/comp5data`,
+against a Stage 3 requirement of ~11 G.
