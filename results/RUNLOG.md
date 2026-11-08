@@ -1383,3 +1383,73 @@ composition story deserves less confidence than I gave it.
 ~61 GB of the 80 GB card, so two concurrent screens would OOM; and the script is launched once,
 by hand, after the main screen finishes rather than chained on `pgrep` waits, which deadlocked
 in Stage 11b.
+
+---
+
+## Stage 22 — main screen final: 28/7,200, and both composition hypotheses fail
+
+| | value |
+|---|---|
+| designs screened | 7,200 |
+| full-criteria passes | **28 (0.39%)** |
+| distinct backbones | **16** |
+| **unique hit sequences** | **24** (4 duplicates among the 28) |
+
+### Pool comparison — neither difference is significant
+
+| pool | n | pass | rate | pae median |
+|---|---|---|---|---|
+| sol_neutral | 1800 | 9 | 0.50% | 26.67 |
+| sol_basic | 1800 | 7 | 0.39% | 26.77 |
+| van_neutral | 1800 | 8 | 0.44% | 26.73 |
+| van_basic | 1800 | 4 | 0.22% | 26.78 |
+
+| comparison | rates | z |
+|---|---|---|
+| soluble vs vanilla | 0.44% vs 0.33% | **+0.76** |
+| neutral vs basic R/K | 0.47% vs 0.31% | **+1.14** |
+
+**Neither reaches |z| = 1.96.** With 28 events total there is no power to distinguish any of
+these, and reporting a winner would be exactly the small-sample error this project has already
+made three times. The honest statement:
+
+- **Vanilla's better composition bought nothing measurable.** Composition moved substantially
+  (0.413 vs 0.311 hydrophobic, net −4 vs −8) and the hit rate did not. The hypothesis I used to
+  justify the vanilla pools is unsupported.
+- **The R/K bias is not supported either.** It underperforms neutral in both weight sets
+  (9>7 and 8>4), consistently in direction but not significantly. It has been labelled a
+  HYPOTHESIS in the config since the beginning and it stays unvalidated — and, per Stage 20, it
+  was never even applied at full strength, failing to change the sequence 12–14% of the time.
+
+### Why the composition correlation keeps reappearing without being causal
+
+Hits do have better composition than non-hits — 0.372 vs 0.341 hydrophobic, 0.475 vs 0.551
+charged. So the *correlation* reproduces at n=7,200. But *intervening* on composition via the
+weight set moved composition without moving the hit rate at all.
+
+That is the clean reading: composition is a **marker** of designs that fold and pack well, not a
+**cause** of good interfaces. Selecting on it works; engineering it does not. Both statements
+can hold simultaneously, and conflating them is what sent me down the vanilla path.
+
+### Length confirms, with a ceiling
+
+| band | n | pass | rate |
+|---|---|---|---|
+| 65–69 | 1752 | 1 | 0.06% |
+| 70–74 | 1624 | 7 | 0.43% |
+| 75–79 | 1744 | 7 | 0.40% |
+| **80–84** | 1752 | **13** | **0.74%** |
+| 85–89 | 328 | 0 | 0.00% |
+
+Peak at 80–84 aa, ~12× the 65–69 band. The 85–89 cell is only the edge of the generated range
+(n=328) and cannot distinguish a real falloff from noise — which is precisely what the 86–100 aa
+long arm will answer.
+
+### Bug: the pool column was empty in the first report
+
+`42_af2_filter.py` derived `mpnn_pool` with `cid.split("_",1)[0]`, which yields `sol` for
+`sol_neutral_...` and matched nothing, leaving the column blank and **silently hiding the entire
+soluble-vs-vanilla comparison** in the first printed summary. Same root cause as the Stage 17
+threading bug: pool names now contain underscores and the pilot's did not. Fixed to match by
+full pool name, longest first, and the filter was re-run over the existing scorefile at no GPU
+cost. This one failed quietly rather than loudly, which is worse.

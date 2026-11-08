@@ -40,6 +40,9 @@ PLDDT_BINDER_MIN = 80.0
 TARGET_RMSD_MAX = 5.0
 BINDER_RMSD_MAX = 1.5      # reported, not gated -- see docstring in 41_af2_screen.sh
 
+POOLS = ("sol_neutral", "sol_basic", "van_neutral", "van_basic",
+         "neutral", "basic")   # legacy pilot names last
+
 
 def read_scorefile(p: Path) -> list[dict]:
     rows, hdr = [], None
@@ -101,7 +104,12 @@ def main() -> int:
             "sequence": meta.get("sequence", ""),
             "length": meta.get("length", ""),
             "backbone": meta.get("backbone", ""),
-            "mpnn_pool": cid.split("_", 1)[0] if cid.split("_", 1)[0] in ("neutral", "basic") else "",
+            # Match by FULL pool name, longest first: pool names such as
+            # "sol_neutral" contain underscores, so split("_",1)[0] yields "sol"
+            # and silently leaves this column empty -- which it did, hiding the
+            # whole soluble-vs-vanilla comparison in the first main-screen report.
+            "mpnn_pool": next((_p for _p in sorted(POOLS, key=len, reverse=True)
+                               if cid.startswith(_p + "_")), ""),
             "af2_pae_interaction": pae,
             "af2_plddt_binder": pl,
             "af2_target_aligned_rmsd": trm,
