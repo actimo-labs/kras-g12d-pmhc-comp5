@@ -33,6 +33,11 @@ PREFIX="${4:-g}"
 # diversity arm. Empty means RFdiffusion picks its default (Complex_base for
 # hotspot-conditioned binder design).
 CKPT="${5:-}"
+# Binder length band. Default 65-85 was the original category-1 hedge; the
+# measured hit rate rises monotonically with length (0.11% at 64-67 aa to 1.49%
+# at 80-83 aa), and category 1 runs to 100 aa, so the long band is where the
+# yield is.
+LENBAND="${6:-65-85}"
 mkdir -p "$OUT" logs
 
 log() { echo -e "\n=== [$(date -u +%H:%M)] $* ===" ; }
@@ -60,7 +65,7 @@ while [ "$(have)" -lt "$TARGET" ]; do
     inference.output_prefix="/work/${OUT}/${PREFIX}_${n}" \
     "${CKPT_ARG[@]}" \
     inference.input_pdb=/work/structures/crop/g12d_crop.pdb \
-    'contigmap.contigs=[A1-180/0 C1-10/0 65-85]' \
+    "contigmap.contigs=[A1-180/0 C1-10/0 ${LENBAND}]" \
     'ppi.hotspot_res=[C4,C5,C7,C8]' \
     inference.num_designs="$want" \
     inference.write_trajectory=False \

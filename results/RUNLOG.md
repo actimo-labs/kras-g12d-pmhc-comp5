@@ -1294,3 +1294,53 @@ validated and does not need inventing:
 Designs promoted via step 2 rather than step 1 must be labelled as such in the submission
 manifest and the methods note. They clear a validated fold-self-consistency bar but **not** the
 published interface criterion, and saying otherwise would misrepresent them.
+
+---
+
+## Stage 20 — length is the strongest lever found so far; long-binder arm launched
+
+Screen at 5,584/7,200. Full-criteria pass rate recovered to **22/5,584 = 0.39%** (projected ~28
+of 7,200) from the 0.10% interim, because the interim had only seen the shortest designs.
+
+### Hit rate rises ~13× with binder length
+
+| length | n | pae<10 | rate |
+|---|---|---|---|
+| 64–67 | 936 | 1 | 0.11% |
+| 68–71 | 1472 | 3 | 0.20% |
+| 72–75 | 1216 | 6 | 0.49% |
+| 76–79 | 1496 | 7 | 0.47% |
+| **80–83** | 471 | 7 | **1.49%** |
+
+Monotonic across five bands, with ~1,000–1,500 designs in each of the lower four. The top band
+is n=471 with 7 events, so its 1.49% carries a wide interval — per the n<30 rule from Stage 18
+the *trend* is the solid part, not that specific number.
+
+**Generation was capped at 85 aa and molecule category 1 runs to 100 aa**, so the most
+productive part of the allowed range was never sampled. That is an unforced error in the
+original length band, not a discovery about the target.
+
+**Action:** 200-design arm at **86–100 aa** launched (`gen/rfdiff_long`, prefix `L`). Paid for
+by Boltz turning out far cheaper than budgeted — ~28 survivors × 3 states × 5 samples is
+~1.2 GPU-h, not the 7 h planned, because the AF2 screen cuts so hard.
+
+### Duplicate sequences: 6.4%, and the R/K bias is weaker than intended
+
+7,200 designs → **6,742 unique sequences**. All 458 duplicates are *within* a weight set
+(`sol_basic`↔`sol_neutral` 244, `van_basic`↔`van_neutral` 214); **zero** sequences are shared
+between soluble and vanilla.
+
+Two conclusions. The weight sets genuinely diverge, so the four-pool design is sound. But the
+positional R/K bias fails to change the sampled sequence 12–14% of the time — at
+`sampling_temp 0.1` ProteinMPNN is near-deterministic and a +1.2 bias at 9–13 positions often
+cannot flip the argmax. The bias is weaker in practice than its nominal setting suggests, which
+is more evidence that the R/K hypothesis has not actually been tested at useful strength.
+
+**Deduplication is now mandatory before ranking.** Identical sequences would otherwise consume
+distinct submission slots, and 20 slots cannot afford that.
+
+### Hits concentrate on few backbones
+
+22 hits span only **12 distinct backbones**. Once a backbone works it tends to work for several
+sequences, which is the documented behaviour of this protocol and argues for deeper sequence
+sampling on proven backbones if time allows after the long arm.
