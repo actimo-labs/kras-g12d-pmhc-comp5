@@ -1344,3 +1344,42 @@ distinct submission slots, and 20 slots cannot afford that.
 22 hits span only **12 distinct backbones**. Once a backbone works it tends to work for several
 sequences, which is the documented behaviour of this protocol and argues for deeper sequence
 sampling on proven backbones if time allows after the long arm.
+
+---
+
+## Stage 21 — deep sequence sampling on proven backbones
+
+Approved by Harjas. 24 sequences per pool × 4 pools × **12 hit backbones** = 1,152 designs.
+
+### Raising the temperature was the load-bearing decision
+
+| | main run | **deep run** |
+|---|---|---|
+| sampling_temp | 0.1 | **0.25** |
+| draws per backbone | 8 | 96 |
+| unique sequences | 6,742 / 7,200 (93.6%) | **1,090 / 1,152 (94.6%)** |
+| unique per backbone (median) | — | **93 of 96** |
+| hydrophobic (median) | 0.311 soluble / 0.413 vanilla | **0.370** |
+| charged (median) | 0.590 soluble / 0.457 vanilla | **0.472** |
+
+At temp 0.1 ProteinMPNN is near-deterministic on these backbones: 2 draws per pool already
+produced 6.4% duplicates and the +1.2 R/K bias could not flip the argmax 12–14% of the time.
+Drawing 96 sequences at that temperature would have returned a handful of distinct sequences
+and spent 1,152 AF2 runs discovering it. At 0.25 we get 93 distinct of 96.
+
+The trade — diversity bought with per-sequence MPNN confidence — is acceptable precisely
+because **AF2 is the arbiter and MPNN score does not predict AF2 success** (Stage 14). These
+designs are screened, not trusted. Had MPNN score been the filter, lowering its confidence
+would have been self-defeating.
+
+Unplanned bonus: temp 0.25 also lands composition at 0.370 hydrophobic / 0.472 charged,
+between the two weight sets and closer to the healthy band than soluble-at-0.1 managed. Some of
+what Stage 17 attributed to the weight set may be a temperature effect — another reason the
+composition story deserves less confidence than I gave it.
+
+### Screen ordering
+
+`scripts/45_remaining_screens.sh` runs beta → deep → long strictly sequentially. AF2 holds
+~61 GB of the 80 GB card, so two concurrent screens would OOM; and the script is launched once,
+by hand, after the main screen finishes rather than chained on `pgrep` waits, which deadlocked
+in Stage 11b.
