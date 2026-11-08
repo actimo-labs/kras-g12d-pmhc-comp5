@@ -1453,3 +1453,51 @@ soluble-vs-vanilla comparison** in the first printed summary. Same root cause as
 threading bug: pool names now contain underscores and the pilot's did not. Fixed to match by
 full pool name, longest first, and the filter was re-run over the existing scorefile at no GPU
 cost. This one failed quietly rather than loudly, which is worse.
+
+---
+
+## Stage 23 — all four generation arms screened: what actually moved the hit rate
+
+| arm | designs | pass | rate | unique seqs | backbones | GPU-h |
+|---|---|---|---|---|---|---|
+| main (65–85 aa, fresh geometry) | 7,200 | 28 | 0.39% | 24 | 16 | ~20 |
+| beta (topology diversity) | 1,200 | 5 | 0.42% | 3 | 3 | ~7 |
+| **deep (24 seqs × 4 pools on 12 proven backbones)** | 1,152 | **120** | **10.42%** | **108** | 11 | ~3 |
+| long (86–100 aa) | 1,600 | 5 | 0.31% | 5 | 4 | ~9 |
+
+**158 passes · ~140 unique sequences · 34 distinct backbones.**
+
+### Only one intervention mattered, and it was not one of mine
+
+**Deep resampling of proven backbones hit 27× better than fresh geometry**, at a fifth of the
+GPU cost of the main screen. Harjas proposed it. The mechanism is that the backbone fixes the
+binding geometry and sequence design then succeeds or fails against it, so once a backbone is
+known to support a solution, the cheapest remaining yield is more draws on it — not more
+geometry, and not better sequences in general.
+
+Scored against what each arm was *predicted* to do:
+
+- **deep** — predicted "high-yield", delivered 10.42%. The one clean win.
+- **beta** — predicted explicitly as "a diversity hedge, not an interface-quality
+  intervention". Delivered exactly that: 0.42% (indistinguishable from main) plus 3 non-helical
+  backbones. Correct call for the stated reason.
+- **long** — predicted to extend the length trend. **It did not.** 0.31% against 0.39% for the
+  main screen. The 80–84 aa band was a genuine peak, not a ramp, and the 85–89 cell that looked
+  like a falloff on n=328 was telling the truth. Cost ~9 GPU-h to establish; worth it, because
+  the alternative was assuming the trend continued and over-weighting long designs in the
+  final set.
+- **vanilla MPNN pools** — predicted better interfaces from better composition. **No effect**
+  (z = +0.76). Composition is a marker, not a lever.
+- **positional R/K bias** — unsupported (z = +1.14 *against* it), and never applied at full
+  strength anyway.
+
+Four of the six hypotheses tested this campaign were mine, and three of those four were wrong.
+The ones that survived were the structural guardrails taken from the brief and verified against
+the structure (buried Asp, groove geometry, peptide-chain hotspots), not the mechanistic stories
+layered on top.
+
+### Final selection entering Boltz
+
+65 collected after dedup and the per-backbone cap; 3 dropped by the composition pre-filter
+(free Cys / homopolymer run / sequon — all would have failed the Stage 5 hard gates regardless),
+leaving **62 designs × 3 states × 5 averaged diffusion samples = 186 predictions**.
