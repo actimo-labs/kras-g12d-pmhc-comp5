@@ -29,6 +29,15 @@ calibrated_thresholds:
     source: negative_control_p95
     real_designs_passing: 4/32
   iptm_margin_wt:
+    # !! DO NOT USE AS A GATE !!
+    # This cut was derived from SINGLE-sample seed noise, whose p95 was 0.404.
+    # At the 5 averaged diffusion samples the final Boltz run actually uses, the
+    # noise floor is ~2.6x lower (mean |seed A - seed B| 0.136 -> 0.053), so this
+    # value is far too strict: it passes 0/32 real designs. Recalibrating it
+    # needs 5-sample negative controls, which were not run.
+    # scripts/60_rank.py therefore RANKS on iptm_margin_wt lexicographically and
+    # does NOT gate on this number. Anything that starts gating on it will
+    # silently reject every design.
     value: 0.4041
     provisional: false
     source: negative_control_p95
