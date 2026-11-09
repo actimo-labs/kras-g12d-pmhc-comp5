@@ -1,0 +1,110 @@
+{
+  "source_pdb": "7OW6",
+  "source_resolution_angstrom": 2.64,
+  "tcr_chains_removed": [
+    "D",
+    "E"
+  ],
+  "chains": {
+    "heavy": "A",
+    "b2m": "B",
+    "peptide": "C"
+  },
+  "peptide_sasa_tcr_removed": {
+    "1": {
+      "aa": "V",
+      "n_sidechain_atoms": 3,
+      "sasa_whole_pmhc": 1.2,
+      "sasa_whole_isolated": 193.5,
+      "rel_exposure_whole": 0.6,
+      "sasa_sidechain_pmhc": 1.2,
+      "rel_exposure_sidechain": 1.1
+    },
+    "2": {
+      "aa": "V",
+      "n_sidechain_atoms": 3,
+      "sasa_whole_pmhc": 2.1,
+      "sasa_whole_isolated": 142.0,
+      "rel_exposure_whole": 1.5,
+      "sasa_sidechain_pmhc": 0.0,
+      "rel_exposure_sidechain": 0.0
+    },
+    "3": {
+      "aa": "V",
+      "n_sidechain_atoms": 3,
+      "sasa_whole_pmhc": 5.9,
+      "sasa_whole_isolated": 127.0,
+      "rel_exposure_whole": 4.6,
+      "sasa_sidechain_pmhc": 4.8,
+      "rel_exposure_sidechain": 4.9
+    },
+    "4": {
+      "aa": "G",
+      "n_sidechain_atoms": 0,
+      "sasa_whole_pmhc": 37.0,
+      "sasa_whole_isolated": 63.5,
+      "rel_exposure_whole": 58.3,
+      "sasa_sidechain_pmhc": 0,
+      "rel_exposure_sidechain": null
+    },
+    "5": {
+      "aa": "A",
+      "n_sidechain_atoms": 1,
+      "sasa_whole_pmhc": 26.9,
+      "sasa_whole_isolated": 98.9,
+      "rel_exposure_whole": 27.2,
+      "sasa_sidechain_pmhc": 9.7,
+      "rel_exposure_sidechain": 16.0
+    },
+    "6": {
+      "aa": "D",
+      "n_sidechain_atoms": 4,
+      "sasa_whole_pmhc": 21.8,
+      "sasa_whole_isolated": 118.0,
+      "rel_exposure_whole": 18.5,
+      "sasa_sidechain_pmhc": 8.8,
+      "rel_exposure_sidechain": 10.4
+    },
+    "7": {
+      "aa": "G",
+      "n_sidechain_atoms": 0,
+      "sasa_whole_pmhc": 75.5,
+      "sasa_whole_isolated": 90.0,
+      "rel_exposure_whole": 83.8,
+      "sasa_sidechain_pmhc": 0,
+      "rel_exposure_sidechain": null
+    },
+    "8": {
+      "aa": "V",
+      "n_sidechain_atoms": 3,
+      "sasa_whole_pmhc": 46.6,
+      "sasa_whole_isolated": 122.1,
+      "rel_exposure_whole": 38.1,
+      "sasa_sidechain_pmhc": 37.4,
+      "rel_exposure_sidechain": 37.8
+    },
+    "9": {
+      "aa": "G",
+      "n_sidechain_atoms": 0,
+      "sasa_whole_pmhc": 15.7,
+      "sasa_whole_isolated": 56.3,
+      "rel_exposure_whole": 28.0,
+      "sasa_sidechain_pmhc": 0,
+      "rel_exposure_sidechain": null
+    },
+    "10": {
+      "aa": "K",
+      "n_sidechain_atoms": 5,
+      "sasa_whole_pmhc": 6.7,
+      "sasa_whole_isolated": 254.9,
+      "rel_exposure_whole": 2.6,
+      "sasa_sidechain_pmhc": 2.4,
+      "rel_exposure_sidechain": 1.6
+    }
+  },
+  "total_peptide_sasa_angstrom2": 239.4,
+  "wt_build": "D6->G by side-chain atom deletion; no relax (no PyRosetta/OpenMM on box)",
+  "empty_build": "chain C deleted; no relax; rigid approximation, see docstring",
+  "bulge_up_state": "not_run",
+  "relax_applied": false
+}

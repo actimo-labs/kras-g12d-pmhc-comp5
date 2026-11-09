@@ -1,0 +1,5 @@
+candidate_id,stage,reject_reason
+smoke_0_s1,05_boltz3_composition_prefilter,hydrophobic_run>=5
+sol_basic_g_240_16_s1,05_boltz3_composition_prefilter,n_glycosylation_sequon
+sol_basic_g_240_16_s2,05_boltz3_composition_prefilter,n_glycosylation_sequon
+van_neutral_g_652_59_s1,05_boltz3_composition_prefilter,hydrophobic_run>=5

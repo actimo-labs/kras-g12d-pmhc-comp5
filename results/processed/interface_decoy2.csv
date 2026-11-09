@@ -1,0 +1,14 @@
+binder_chain,binder_length,bsa_binder,bsa_peptide,bsa_total_target,contact_cutoff_angstrom,design,hotspots_contacted,n_hotspots_contacted,n_peptide_contacts,n_target_contact_res,peptide_atom_contacts,peptide_contact_fraction_area,peptide_contact_fraction_count,peptide_contacts_backbone,peptide_contacts_sidechain,peptide_positions_contacted,qc_status,reject_reason,sidechains_present
+X,85,285.3,0,303.9,4.5,neutral_e_0_s2,[],0,0,7,0,0.0,0.0,0,0,[],scored,,True
+X,67,86.9,0,87.7,4.5,neutral_e_10_s3,[],0,0,1,0,0.0,0.0,0,0,[],scored,,True
+X,65,427.7,5.5,369.1,4.5,neutral_e_11_s4,[],0,1,12,1,0.0149,0.0833,1,0,[6],scored,,True
+X,85,955.6,0,861.4,4.5,neutral_e_12_s3,[],0,0,26,0,0.0,0.0,0,0,[],scored,,True
+X,75,462.8,0,568.2,4.5,neutral_e_14_s3,[],0,0,11,0,0.0,0.0,0,0,[],scored,,True
+X,68,397.3,0,385.7,4.5,neutral_e_15_s1,[],0,0,8,0,0.0,0.0,0,0,[],scored,,True
+X,85,379.2,0,352.6,4.5,neutral_e_1_s1,[],0,0,8,0,0.0,0.0,0,0,[],scored,,True
+X,81,168.6,0,163.6,4.5,neutral_e_2_s3,[],0,0,5,0,0.0,0.0,0,0,[],scored,,True
+X,76,343.3,0,347.5,4.5,neutral_e_3_s4,[],0,0,7,0,0.0,0.0,0,0,[],scored,,True
+X,79,560.3,0,585.4,4.5,neutral_e_5_s3,[],0,0,11,0,0.0,0.0,0,0,[],scored,,True
+X,85,335.6,0,371.2,4.5,neutral_e_7_s2,[],0,0,6,0,0.0,0.0,0,0,[],scored,,True
+X,71,511.0,54.7,508.9,4.5,neutral_e_8_s1,"[7, 8]",2,2,11,5,0.1074,0.1818,4,1,"[7, 8]",scored,,True
+X,70,890.2,0,839.3,4.5,neutral_e_9_s4,[],0,0,23,0,0.0,0.0,0,0,[],scored,,True

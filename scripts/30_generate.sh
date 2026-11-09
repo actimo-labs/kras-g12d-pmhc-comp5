@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Stage 2 -- bulk backbone generation, 900 backbones on the alpha1/alpha2 crop.
+#
+# Authorised by Harjas 2026-11-07 ("prioritise achieving the objectives of the
+# comp", n_backbones "whatever is good for efficiency and performance").
+#
+# 900, not the configured 3500: measured 64.9 s/backbone, so 3500 is ~63 GPU-h
+# against a ~16 GPU-h block. 900 is ~16.2 GPU-h. Volume is not the binding
+# constraint anyway -- 32/32 pilot backbones contacted the peptide and 47% hit
+# all four hotspots.
+#
+# Generated in CHUNKS so the run is resumable: RFdiffusion writes each design as
+# it finishes, so the chunk loop just counts what is already on disk and asks
+# for the remainder. A crash or a VM restart costs at most one chunk.
+#
+# inference.write_trajectory=False is NOT optional here. The default True dumps
+# two denoising-trajectory PDBs per design, which measured 6.0 GB for the first
+# 532 backbones -- 79x the 76 MB the actual designs occupy. Nothing in this repo
+# reads them (grep traj scripts/ src/ -> nothing). At 900 backbones they would
+# have taken ~10 GB on a box with 24 G free that still needs ~11 GB for Stage 3.
+#
+# Length band 65-85 aa keeps every design inside the published 40-100 aa
+# molecule category 1. A smaller out-of-band block is generated separately at
+# the end for category hedging, per docs/PIPELINE.md Stage 2.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+TARGET="${1:-900}"
+CHUNK="${2:-60}"
+OUT="${3:-gen/rfdiff}"
+PREFIX="${4:-g}"
+# Optional checkpoint override, e.g. Complex_beta_ckpt.pt for the topology
+# diversity arm. Empty means RFdiffusion picks its default (Complex_base for
+# hotspot-conditioned binder design).
+CKPT="${5:-}"
+# Binder length band. Default 65-85 was the original category-1 hedge; the
+# measured hit rate rises monotonically with length (0.11% at 64-67 aa to 1.49%
+# at 80-83 aa), and category 1 runs to 100 aa, so the long band is where the
+# yield is.
+LENBAND="${6:-65-85}"
+mkdir -p "$OUT" logs
+
+log() { echo -e "\n=== [$(date -u +%H:%M)] $* ===" ; }
+
+have() { ls "$OUT"/${PREFIX}_*.pdb 2>/dev/null | wc -l; }
+
+log "Generation: target ${TARGET} into ${OUT} (prefix ${PREFIX}), chunk ${CHUNK}${CKPT:+, ckpt ${CKPT}}"
+echo "already on disk: $(have)"
+
+while [ "$(have)" -lt "$TARGET" ]; do
+  avail=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+  if [ "$avail" -lt 5 ]; then
+    echo "ABORT: only ${avail}G free, stopping generation"; exit 1
+  fi
+
+  n=$(have)
+  want=$(( TARGET - n ))
+  [ "$want" -gt "$CHUNK" ] && want=$CHUNK
+
+  echo "[$(date -u +%H:%M)] have ${n}/${TARGET}, generating ${want} more (${avail}G free)"
+  s=$(date +%s)
+  CKPT_ARG=()
+  [ -n "$CKPT" ] && CKPT_ARG=(inference.ckpt_override_path="/app/RFdiffusion/models/${CKPT}")
+  ./rfdiffusion.sh \
+    inference.output_prefix="/work/${OUT}/${PREFIX}_${n}" \
+    "${CKPT_ARG[@]}" \
+    inference.input_pdb=/work/structures/crop/g12d_crop.pdb \
+    "contigmap.contigs=[A1-180/0 C1-10/0 ${LENBAND}]" \
+    'ppi.hotspot_res=[C4,C5,C7,C8]' \
+    inference.num_designs="$want" \
+    inference.write_trajectory=False \
+    hydra.run.dir=/work/.hydra >> "logs/gen_${PREFIX}.log" 2>&1
+  rc=$?
+  e=$(date +%s)
+  echo "  chunk rc=${rc} wall=$((e-s))s  total now $(have)"
+
+  if [ "$rc" -ne 0 ]; then
+    echo "  chunk failed; retrying once after a pause"
+    sleep 30
+    continue
+  fi
+  # guard against a chunk that produces nothing, to avoid an infinite loop
+  if [ "$(have)" -le "$n" ]; then
+    echo "ABORT: chunk produced no new backbones"; exit 1
+  fi
+done
+
+log "Stage 2 generation COMPLETE: $(have) backbones"
+du -sh "$OUT"

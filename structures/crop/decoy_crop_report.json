@@ -1,0 +1,41 @@
+{
+  "purpose": "framework-binder NEGATIVE CONTROL, not a candidate",
+  "epitope": "beta2-microglobulin",
+  "hotspot_res": [
+    "B44",
+    "B45",
+    "B47",
+    "B48"
+  ],
+  "hotspot_dist_to_peptide_angstrom": {
+    "44": 37.5,
+    "45": 33.1,
+    "47": 30.4,
+    "48": 28.8
+  },
+  "max_ca_ca_spread_angstrom": 12.5,
+  "heavy_chain_included": false,
+  "heavy_chain_clearance_angstrom": {
+    "44": 19.6,
+    "45": 14.9,
+    "47": 15.6,
+    "48": 12.7
+  },
+  "heavy_chain_omitted_because": "15 A context fragments chain A into 32 segments; patch is 12.7-19.6 A clear so context is unnecessary",
+  "chains_kept": [
+    "B"
+  ],
+  "residues_kept": {
+    "B": 99
+  },
+  "segments": {
+    "B": [
+      [
+        1,
+        99
+      ]
+    ]
+  },
+  "contigs": "B1-99",
+  "expected_behaviour": "must FAIL the peptide-dependency gate: iptm_margin_empty ~ 0 and no peptide contacts"
+}

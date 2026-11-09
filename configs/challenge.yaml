@@ -12,8 +12,8 @@ challenge:
   deadline_aoe: "2026-11-08T23:59:00-12:00"
   deadline_melbourne: "2026-11-09T22:59:00+11:00"
   internal_freeze_melbourne: "2026-11-09T18:00:00+11:00"
-  track: UNCONFIRMED          # prior rounds were Track 3 -> cap 20. CONFIRM WITH HARJAS.
-  max_designs: 20             # 40 for Track 1, 20 for Tracks 2/3
+  track: 3                    # CONFIRMED by Harjas 2026-11-07
+  max_designs: 20             # Track 3 cap. 40 is Track 1 only.
   length_min: 10
   length_max: 250
   allowed_formats: [single_chain_protein, nanobody, scFv, Fab]
@@ -63,22 +63,68 @@ conformational_states:
 hotspots:
   chain: C
   primary: [4, 5, 7, 8]    # exposed central bulge
-  tracked_not_targeted: [6] # mutant Asp - buried in bulge_down state
+  tracked_not_targeted: [6, 9] # p6 mutant Asp (buried in bulge_down); p9 Gly
   anchors_excluded: [1, 10] # p1 Val A-pocket, p10 Lys F-pocket
   exclude_regions: ["chain A alpha1 helix", "chain A alpha2 helix", "chain B"]
   note: "Hotspots reference the TARGET chain's renumbered residues AFTER cropping. Assert in code."
   crop_shell_angstrom: 15
+  tracked_rationale:
+    p6: "mutant Asp. Buried in F-pocket in bulge_down (7OW6). Contact-accounted, not targeted."
+    p9: "Gly9 is one of the four critical positions in the Poole & Karuppiah 2022 alanine
+         scan (D6, G4, A5, G9). Added to tracked_not_targeted 2026-11-07 - it was previously
+         unclassified, which meant contact accounting silently ignored a position the
+         reference TCR depends on. Tracked, NOT promoted to a primary hotspot: no structural
+         evidence yet in this repo that p9 is solvent-exposed in the bulge_down state, and
+         RFdiffusion hotspot conditioning on a buried residue wastes backbones."
+  low_side_chain_positions: [4, 5, 7, 9]
+  low_side_chain_note: "p4 G, p5 A, p7 G, p9 G - Gly/Ala, minimal or no side chain. This
+    interface is carried by SHAPE COMPLEMENTARITY and ELECTROSTATICS, not side-chain packing.
+    Do NOT treat weak per-residue side-chain contact at these positions as a failed design;
+    score them on backbone/Cbeta proximity and buried area, not on side-chain contact counts.
+    Applies to the peptide_contact_fraction definition in scripts/*_metrics*."
 
 generation:
   track_a1:
     model: rfdiffusion
     source: "reuse tnf-a-comp2/rfdiffusion.sh"
-    n_backbones: 3500
+    # REVISED 2026-11-07 from 3500, approved by Harjas ("whatever is good for
+    # efficiency and performance").
+    # Measured 64.9 s/backbone on the 190-residue crop (2076 s / 32). 3500 would
+    # be ~63 GPU-h against a ~16 GPU-h block -- 3.9x over. 900 is ~16.2 GPU-h.
+    # Volume is also not the constraint it was assumed to be: the pilot got
+    # 32/32 backbones contacting the peptide and 47% hitting all four hotspots,
+    # against PIPELINE.md's expectation that "only a small fraction" would. The
+    # funnel from 900 (x4 seqs x2 pools, ~80% composition pass, 1 per
+    # backbone/pool) still yields ~1800 candidates for a 600-design Stage 3.
+    n_backbones: 900
     enabled: true
   track_a2:
     model: freebindcraft
     n_designs: 800
+    enabled: false          # NOT INSTALLED (Stage 00 audit) and no budget to
+                            # add a generator after the pilot. RFdiffusion
+                            # yield makes a second generator unnecessary for
+                            # volume; it would only have added pose diversity.
+  track_a1_beta:
+    model: rfdiffusion
+    checkpoint: Complex_beta_ckpt.pt
+    n_backbones: 150
     enabled: true
+    purpose: topology_diversity
+    rationale: |
+      Measured monoculture in the pilot: 32/32 backbones >50% helical, median
+      helical fraction 0.91, only 1/32 with any extended content.
+      docs/PIPELINE.md section 5 explicitly warns against all submissions
+      converging on one tool and one binding mode, and we were there.
+      Complex_beta_ckpt.pt ships with the RFdiffusion image (no new dependency)
+      and is RFdiffusion's own topology-diversity checkpoint. Smoke test on n=2:
+      extended fraction 0.10 vs 0.01 default, helical 0.84 vs 0.91. A real but
+      MODEST shift, and it costs ~70% more per backbone (1.79 vs 1.04 min).
+      NOT a fix for the 99% pae_interaction failure rate -- this is a diversity
+      hedge, not an interface-quality intervention. It is specifically NOT the
+      beta-pairing-TARGETED conditioning of Sappington et al. (Nat Commun 2025),
+      which conditions binder strands to pair with target edge strands and does
+      report improved affinity; that needs conditioning machinery we do not have.
   track_b:
     model: rfantibody
     format: nanobody
@@ -90,6 +136,20 @@ generation:
 
 sequence_design:
   models: [proteinmpnn, solublempnn]
+  # 4 labelled pools, 2 sequences each = 8 per backbone. Approved by Harjas
+  # 2026-11-07 ("run both MPNN pools"). Vanilla was added because SolubleMPNN
+  # overshoots surface charge on these backbones (0.52-0.67 charged vs ~0.25-0.30
+  # typical) and composition tracked AF2 quality monotonically. First n=4 check
+  # shows vanilla is only MODESTLY less charged (0.464 vs 0.490, net -6 vs -10)
+  # with hydrophobic unchanged -- so the charge is mostly from the helical
+  # backbones and the Ala de-bias, not the weight set. Both run as separate
+  # pools so this is measured at scale rather than assumed.
+  pool_spec:
+    sol_neutral: {weights: soluble, bias: none}
+    sol_basic:   {weights: soluble, bias: positional_RK_over_p6}
+    van_neutral: {weights: vanilla, bias: none}
+    van_basic:   {weights: vanilla, bias: positional_RK_over_p6}
+  seqs_per_pool: 2
   pools:
     neutral:
       bias: null
@@ -106,10 +166,26 @@ cofolding:
   triage:
     model: boltz2
     states: [g12d]
-    keep_top_n: 600
+    diffusion_samples: 1    # 1 sample is adequate for a COARSE cut: the
+                            # absolute iptm_binder_peptide has rho +0.703 even
+                            # unaveraged. Margins are not used at this stage.
+    keep_top_n: 450         # was 600. Measured 5-sample cost is 39.7 s/pred
+                            # (2.41x single, not 5x -- the trunk is shared).
+                            # 600x3 at 5 samples = 19.9 GPU-h, plus 8.3 for
+                            # triage = 28 GPU-h against a ~20 h block. 450
+                            # brings the full matrix to 14.9 GPU-h, ~23 total.
   full_matrix:
-    models: [boltz2, chai1]
+    # Chai-1 dropped 2026-11-07, approved by Harjas ("okay if boltz2 does the
+    # job"). It is not installed, and the two-model consensus it was meant to
+    # provide was aimed at the ipTM differentials -- which the seed replicate
+    # showed are at the noise floor anyway. A second model would have averaged
+    # two noisy estimates rather than producing a reliable one. Ranking now
+    # rests on folded-complex geometry, which is single-model by nature.
+    models: [boltz2]
     states: [g12d, wt, empty]
+    diffusion_samples: 5    # REQUIRED. The margins are only usable averaged;
+                            # see ranking.objective_1_status.
+    average_samples: true
   antibody_track_extra:
     model: opendde
     checkpoint: opendde_abag.pt
@@ -144,10 +220,52 @@ negative_controls:
 
 ranking:
   method: lexicographic      # matches official ranking. Do NOT build a weighted composite.
+  # REVISED 2026-11-07 after the pilot, approved by Harjas ("agree with your
+  # metric evaluation"). The original order is kept below for audit.
+  #
+  # WHY: the seed replicate measured iptm_margin_wt at signal-to-noise 0.84 --
+  # the seed-to-seed variance of ONE design (mean |d| 0.186) exceeded the spread
+  # across ALL 32 designs (sd 0.157). One design moved -0.353 -> +0.185 on a
+  # seed change alone. Ranking on it ranks the random number generator.
+  # iptm_margin_empty is better (S/N 1.86) but still too weak to gate on.
+  # Geometry, by contrast, separates cleanly: bsa_peptide median 68.3 A^2 for
+  # peptide-targeted designs vs 0.0 A^2 for beta2m framework decoys.
+  # See results/RUNLOG.md Stage 07.
+  # RE-REVISED 2026-11-07 after scripts/21_sampletest.sh. Averaging 5 diffusion
+  # samples cut margin_wt noise 0.136 -> 0.053 and lifted its between-seed
+  # Spearman rho from +0.239 to +0.846, clearing the rho > 0.70 bar. Objective 1
+  # therefore REGAINS a proxy and is no longer UNPREDICTED -- but only when
+  # scored with >=5 averaged samples. At one sample it remains noise.
+  order_5sample:
+    - iptm_margin_wt         # objective 1, restored. VALID ONLY at >=5 samples.
+    - peptide_geometry       # objective 2: bsa_peptide + contacts + hotspots
+    - iptm_margin_empty      # objective 2 confirm (rho +0.881 at 5 samples)
+    - affinity_proxy         # objective 3. NEVER reported as a K_D.
   order:
-    - iptm_margin_wt         # objective 1: mutation specificity
-    - iptm_margin_empty      # objective 2: peptide dependency
-    - affinity_proxy         # objective 3: rosetta_ddg + prodigy. NEVER reported as KD.
+    - peptide_geometry       # objective 2 proxy, PROMOTED: bsa_peptide +
+                             # n_peptide_contacts + hotspot coverage, measured
+                             # on the FOLDED complex. The only metric shown to
+                             # discriminate framework from peptide binders.
+    - iptm_margin_empty      # objective 2, demoted to tiebreak (S/N 1.86)
+    - affinity_proxy         # objective 3: interface BSA + contact density.
+                             # NEVER reported as a K_D.
+  objective_1_status: |
+    RECOVERED at >=5 averaged diffusion samples, 2026-11-07.
+    scripts/21_sampletest.sh: margin_wt noise 0.136 -> 0.053, between-seed
+    Spearman rho +0.239 -> +0.846, S/N 1.15 -> 2.94. margin_empty likewise
+    improved to rho +0.881, S/N 4.40.
+    CONDITION: this holds ONLY for scores averaged over >=5 diffusion samples.
+    Any single-sample margin_wt in this repo is noise and must not be ranked on.
+    The manifest records n_samples_averaged per row; check it before using a
+    margin.
+    STILL TRUE: the calibrated cut in configs/thresholds_calibrated.yaml
+    (0.4041) was derived from SINGLE-sample noise and is far too strict for
+    5-sample scores. It must be recalibrated against 5-sample negative controls
+    before it gates anything.
+  superseded_order:          # original, kept for audit only
+    - iptm_margin_wt
+    - iptm_margin_empty
+    - affinity_proxy
 
 diversity:
   cluster_method: tm_score
@@ -157,7 +275,24 @@ diversity:
 
 submission:
   columns: ["name", "sequence", "molecule_class"]
-  columns_verified: false    # RE-CHECK THE LIVE SUBMIT FORM BEFORE FREEZING
+  columns_verified: true     # verified against the live challenge page 2026-11-09
+  molecule_class_allowed: [single_chain, nanobody, scfv, fab_kappa, fab_lambda]
+  molecule_class_used: single_chain
+  molecule_class_source_conflict: |
+    FAQ 5 on the challenge page lists the first option as "protein"; the actual
+    upload widget lists it as "single_chain". Harjas read the upload form on
+    2026-11-09 and that is what parses the file, so it wins. The form also
+    states molecule_class is OPTIONAL and settable per design in the UI after
+    upload, so this is recoverable either way.
+  row_order: "ranked, top row = highest ranked (required by the challenge page)"
+  verification_note: |
+    The page confirms name/sequence/molecule_class and requires the CSV be
+    ordered by ranking, top row first. It ALSO constrains molecule_class to an
+    exact vocabulary. We had been writing "protein_minibinder", which is the
+    published molecule CATEGORY (40-100 aa, used for scoring stratification) and
+    NOT a legal molecule_class value -- it would likely have been rejected.
+    Caught only because scripts/70_submission.py hard-failed the audit while
+    columns_verified was false.
   rank_ordered: true
   include_methods_note: true
   methods_note_must_state: "which surface we target + link predicted complexes"
