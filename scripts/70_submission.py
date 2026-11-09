@@ -31,6 +31,13 @@ from comp5.paths import rel  # noqa: E402
 
 VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
 
+# Verified against the live challenge page 2026-11-09. molecule_class must be
+# one of these EXACT strings. We previously wrote "protein_minibinder", which is
+# descriptive but not a legal value and would have been rejected. "Protein
+# minibinder, 40-100 aa" is the published molecule CATEGORY used for scoring
+# stratification -- it is not the molecule_class field.
+VALID_MOLECULE_CLASS = {"protein", "nanobody", "scfv", "fab_kappa", "fab_lambda"}
+
 
 def f(r, k):
     try:
@@ -69,8 +76,7 @@ def main() -> int:
         w.writerow(cols)
         for r in rows:
             name = f"comp5_t3_{int(r['rank']):02d}_{r['candidate_id'][:36]}"
-            mol = ("protein_minibinder" if 40 <= len(r["sequence"]) <= 100
-                   else "single_chain_protein")
+            mol = "protein"   # single-chain de novo protein; see VALID_MOLECULE_CLASS
             w.writerow([name, r["sequence"], mol])
 
     # ---------------- audit, re-derived from the written CSV ----------------
@@ -101,6 +107,10 @@ def main() -> int:
             problems.append(f"{r['name']}: invalid residues {bad}")
         if "C" in s:
             notes.append(f"{r['name']}: contains Cys (expression system undisclosed)")
+    for r in wrote:
+        if r["molecule_class"] not in VALID_MOLECULE_CLASS:
+            problems.append(f"{r['name']}: molecule_class {r['molecule_class']!r} not in "
+                            f"{sorted(VALID_MOLECULE_CLASS)}")
 
     if not verified:
         problems.append("submission.columns_verified is FALSE -- the column names "

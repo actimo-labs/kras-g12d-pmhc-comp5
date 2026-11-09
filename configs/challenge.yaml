@@ -275,7 +275,18 @@ diversity:
 
 submission:
   columns: ["name", "sequence", "molecule_class"]
-  columns_verified: false    # RE-CHECK THE LIVE SUBMIT FORM BEFORE FREEZING
+  columns_verified: true     # verified against the live challenge page 2026-11-09
+  molecule_class_allowed: [protein, nanobody, scfv, fab_kappa, fab_lambda]
+  molecule_class_used: protein
+  row_order: "ranked, top row = highest ranked (required by the challenge page)"
+  verification_note: |
+    The page confirms name/sequence/molecule_class and requires the CSV be
+    ordered by ranking, top row first. It ALSO constrains molecule_class to an
+    exact vocabulary. We had been writing "protein_minibinder", which is the
+    published molecule CATEGORY (40-100 aa, used for scoring stratification) and
+    NOT a legal molecule_class value -- it would likely have been rejected.
+    Caught only because scripts/70_submission.py hard-failed the audit while
+    columns_verified was false.
   rank_ordered: true
   include_methods_note: true
   methods_note_must_state: "which surface we target + link predicted complexes"
