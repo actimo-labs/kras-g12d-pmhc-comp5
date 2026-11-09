@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import re
 import sys
 from collections import defaultdict
@@ -145,14 +146,38 @@ def main() -> int:
 
     # lexicographic sort. Missing margins sort last rather than being treated
     # as zero, which would flatter a design that was never measured.
+    # NOISE-AWARE lexicographic key.
+    #
+    # The competition's order is specificity -> peptide dependency -> affinity,
+    # and this honours it. But sorting raw iptm_margin_wt sorts noise: the
+    # measured 5-sample seed-to-seed |delta| is 0.053, and ranks 5-20 differ by
+    # 0.009-0.033 -- less than that. Ordering on those differences is ordering
+    # the random number generator, which is the exact error Stage 08 caught in
+    # the single-sample margins.
+    #
+    # So objective 1 is BINNED at the noise floor. Designs whose margins are
+    # indistinguishable are treated as tied and the tie is broken by objective 2
+    # (buried peptide area), which IS validated as discriminating: 68.3 A^2 for
+    # peptide-targeted designs vs 0.0 for beta2m framework decoys. This is still
+    # strictly lexicographic -- it just refuses to invent precision the
+    # measurement does not have.
+    MARGIN_NOISE = 0.053
+
     def key(r):
         mw = f(r, "iptm_margin_wt")
         me = f(r, "iptm_margin_empty")
         geo = f(r, "bsa_peptide")
         aff = f(r, "bsa_total_target")
         pae = f(r, "af2_pae_interaction")
+        # Bin to the noise floor; within a bin objective 1 says nothing.
+        # FLOOR, not int(): int() truncates toward zero, so -0.040 and +0.006
+        # would both land in bin 0 and a design scoring BETTER on wild-type
+        # would tie with one scoring better on G12D. Floor puts negatives in a
+        # strictly lower bin, so direction is preserved even where magnitude is
+        # not resolved.
+        mw_bin = (math.floor(mw / MARGIN_NOISE) if mw is not None else -99)
         return (
-            -(mw if mw is not None else -9),
+            -mw_bin,
             -(geo if geo is not None else -9),
             -(me if me is not None else -9),
             -(aff if aff is not None else -9),

@@ -47,10 +47,16 @@ Spearman ρ of **+0.239** — the ranking is near-random under a reseed. At five
 
 ## Honest limits
 
-- **Ranking by `iptm_margin_wt` is meaningful only for the top few rows.** The 5-sample noise
-  floor is 0.053 (mean |Δ| between seeds). Ranks 1–2 (0.178, 0.084) clear it; ranks ~5–20
-  (0.009–0.033) do **not**. Below the top handful the ordering on objective 1 is not resolved
-  by this metric, and we do not claim it is. All 20 are positive in direction.
+- **Objective 1 is binned at its own noise floor, not sorted raw.** The 5-sample seed-to-seed
+  |Δ| for `iptm_margin_wt` is 0.053. Ranks 1–2 (0.178, 0.084) clear that; the rest differ by
+  less than it. Sorting those differences would be sorting the random number generator, so
+  designs within one noise unit are treated as **tied on objective 1** and ordered by
+  objective 2 (buried peptide area), which is validated as discriminating — 68.3 Å² for
+  peptide-targeted designs vs 0.0 Å² for β2m framework decoys. The order remains strictly
+  lexicographic; it simply refuses to invent precision the measurement does not have.
+  Binning uses floor, so a negative margin (better on wild-type) can never tie with a
+  positive one. **All 20 submitted designs are positive on objective 1**, and buried peptide
+  area spans 71.5–199.1 Å².
 - **`iptm_margin_empty` is reproducible (ρ +0.881) but did not discriminate** peptide-targeted
   designs from deliberately-built β2m framework decoys (+0.034 separation). It is reported, not
   relied on, as evidence of peptide dependency. Buried peptide area does discriminate: 68.3 Å²
