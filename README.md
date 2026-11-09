@@ -33,8 +33,8 @@ RFdiffusion  ->  ProteinMPNN / SolubleMPNN  ->  AF2 initial-guess  ->  Boltz-2 t
 ```
 
 RFdiffusion was the **only** generative model used — standard complex checkpoint plus
-`Complex_beta_ckpt` for topology diversity. FreeBindCraft, RFantibody and RFD4-Proteina were
-evaluated and not used.
+`Complex_beta_ckpt` for topology diversity. However RFantibody and RFD4-Proteina were
+evaluated and checkpoints like Flow Denoiser model for RFD4 and RFdiffusion_Ab.pt
 
 **AF2 initial-guess is the selection filter**, not Boltz. It applies the published criteria
 (`pae_interaction < 10`, `plddt_binder > 80`, `target_aligned_rmsd < 5 Å`) and was calibrated
