@@ -91,6 +91,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path,
                     default=ROOT / "results/processed/ranked.csv")
     ap.add_argument("--max-per-backbone", type=int, default=3)
+    ap.add_argument("--max-identity", type=float, default=0.90,
+                    help="reject a design this similar to a higher-ranked one")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(open(ROOT / "configs/challenge.yaml"))
@@ -186,11 +188,32 @@ def main() -> int:
 
     kept.sort(key=key)
 
-    # diversity: cap per backbone so one proven scaffold cannot fill the slate
+    # Diversity, two filters.
+    #
+    # 1. SEQUENCE IDENTITY. Exact-match dedup is NOT enough and the submission
+    #    platform caught what it missed: two pairs at 98.8% and 97.5% identity,
+    #    each the same backbone and same sample index differing only by MPNN
+    #    pool, i.e. the positional R/K bias flipping one or two residues. That
+    #    mechanism was measured in Stage 20 (the bias fails to change the
+    #    sequence 12-14% of the time) and then not acted on here. Near-identical
+    #    designs spend two of twenty slots on one molecule.
+    # 2. PER-BACKBONE CAP, so one proven scaffold cannot fill the slate.
+    def identity(a, b):
+        m = sum(1 for x, y in zip(a, b) if x == y)
+        return m / max(len(a), len(b))
+
     seen = defaultdict(int)
     final, deferred = [], []
     for r in kept:
         bb = r.get("backbone") or "unknown"
+        seq = r.get("sequence", "")
+        twin = next((o for o in final
+                     if identity(seq, o.get("sequence", "")) >= args.max_identity), None)
+        if twin is not None:
+            r["reject_reason"] = (f"identity_{identity(seq, twin['sequence']):.3f}"
+                                  f"_to_{twin['candidate_id']}")
+            deferred.append(r)
+            continue
         if seen[bb] >= args.max_per_backbone:
             r["reject_reason"] = f"diversity_cap_{args.max_per_backbone}_per_backbone"
             deferred.append(r)
