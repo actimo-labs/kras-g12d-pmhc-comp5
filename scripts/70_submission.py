@@ -31,12 +31,26 @@ from comp5.paths import rel  # noqa: E402
 
 VALID_AA = set("ACDEFGHIKLMNPQRSTVWY")
 
-# Verified against the live challenge page 2026-11-09. molecule_class must be
-# one of these EXACT strings. We previously wrote "protein_minibinder", which is
-# descriptive but not a legal value and would have been rejected. "Protein
-# minibinder, 40-100 aa" is the published molecule CATEGORY used for scoring
-# stratification -- it is not the molecule_class field.
-VALID_MOLECULE_CLASS = {"protein", "nanobody", "scfv", "fab_kappa", "fab_lambda"}
+# TWO SOURCES DISAGREE, and the upload widget wins.
+#
+#   FAQ 5 on the challenge page : "protein", nanobody, scfv, fab_kappa, fab_lambda
+#   the actual upload form      : single_chain, nanobody, scfv, fab_kappa, fab_lambda
+#
+# Harjas read the upload form directly on 2026-11-09; that is the thing which
+# parses our file, so it is authoritative over the FAQ prose. We use
+# "single_chain" and accept both spellings as valid so the audit does not
+# block if the form is revised.
+#
+# Low risk either way: the form states molecule_class is OPTIONAL and can be set
+# per design in the UI after upload, so a wrong value here is recoverable rather
+# than disqualifying.
+#
+# (The earlier value "protein_minibinder" was wrong under BOTH vocabularies --
+# it is the published molecule CATEGORY, 40-100 aa, used for scoring
+# stratification, not a molecule_class value.)
+MOLECULE_CLASS = "single_chain"
+VALID_MOLECULE_CLASS = {"single_chain", "protein", "nanobody", "scfv",
+                        "fab_kappa", "fab_lambda"}
 
 
 def f(r, k):
@@ -76,7 +90,7 @@ def main() -> int:
         w.writerow(cols)
         for r in rows:
             name = f"comp5_t3_{int(r['rank']):02d}_{r['candidate_id'][:36]}"
-            mol = "protein"   # single-chain de novo protein; see VALID_MOLECULE_CLASS
+            mol = MOLECULE_CLASS   # see the note on VALID_MOLECULE_CLASS
             w.writerow([name, r["sequence"], mol])
 
     # ---------------- audit, re-derived from the written CSV ----------------

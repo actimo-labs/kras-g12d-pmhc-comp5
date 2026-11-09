@@ -6,7 +6,7 @@
 - length range: 69–95 aa (bounds 10–250)
 - in published molecule category 1 (40–100 aa): 20/20
 - unique sequences: 20/20
-- sha256 of file: `d3a826dddca0bc4d`
+- sha256 of file: `03bb4a40f16dac1c`
 
 ## Blocking problems
 

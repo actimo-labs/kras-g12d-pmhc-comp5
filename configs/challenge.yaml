@@ -276,8 +276,14 @@ diversity:
 submission:
   columns: ["name", "sequence", "molecule_class"]
   columns_verified: true     # verified against the live challenge page 2026-11-09
-  molecule_class_allowed: [protein, nanobody, scfv, fab_kappa, fab_lambda]
-  molecule_class_used: protein
+  molecule_class_allowed: [single_chain, nanobody, scfv, fab_kappa, fab_lambda]
+  molecule_class_used: single_chain
+  molecule_class_source_conflict: |
+    FAQ 5 on the challenge page lists the first option as "protein"; the actual
+    upload widget lists it as "single_chain". Harjas read the upload form on
+    2026-11-09 and that is what parses the file, so it wins. The form also
+    states molecule_class is OPTIONAL and settable per design in the UI after
+    upload, so this is recoverable either way.
   row_order: "ranked, top row = highest ranked (required by the challenge page)"
   verification_note: |
     The page confirms name/sequence/molecule_class and requires the CSV be
