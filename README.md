@@ -32,7 +32,7 @@ RFdiffusion  ->  ProteinMPNN / SolubleMPNN  ->  AF2 initial-guess  ->  Boltz-2 t
  1,250 backbones      11,152 sequences          158 pass (1.4%)        g12d / wt / empty
 ```
 
-RFdiffusion was the **only** generative model used — standard complex checkpoint plus
+RFdiffusion was the only generative model used — standard complex checkpoint plus
 `Complex_beta_ckpt` for topology diversity. However RFantibody and RFD4-Proteina were
 evaluated and checkpoints like Flow Denoiser model for RFD4 and RFdiffusion_Ab.pt
 
